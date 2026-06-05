@@ -2125,7 +2125,7 @@ def main():
                     return styles
 
                 # Format numbers
-                _fmt_matrix = _matrix.applymap(lambda x: f"{x:,.0f}" if x > 0 else "—")
+                _fmt_matrix = _matrix.map(lambda x: f"{x:,.0f}" if x > 0 else "—")
 
                 # Show as styled dataframe
                 styled = _matrix.style.apply(_style_row, axis=1).format("{:,.0f}")
