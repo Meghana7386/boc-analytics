@@ -155,7 +155,18 @@ def T(fig):
 def load_raw_data():
     # Cache busted to pick up date cleaning fixes
     from data_parser import parse_boc_dump, get_data_quality_report
-    filepath = r"C:\Users\meghanar\Downloads\bocdata 1"
+    import os
+    
+    # Use relative path for deployment compatibility
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    filepath = os.path.join(base_dir, "bocdata 1")
+    
+    # Fallback to local path if relative doesn't exist (for local testing)
+    if not os.path.exists(filepath):
+        local_fallback = r"C:\Users\meghanar\Downloads\bocdata 1"
+        if os.path.exists(local_fallback):
+            filepath = local_fallback
+            
     df = parse_boc_dump(filepath)
     report = get_data_quality_report(df)
 
