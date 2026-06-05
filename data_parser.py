@@ -101,6 +101,13 @@ def parse_boc_dump(filepath: str) -> pd.DataFrame:
     df = pd.DataFrame(records)
     
     if not df.empty:
+        # Date Cleaning Rule: Keep only dates >= 2025-01-01 and <= today
+        if 'invoice_date' in df.columns:
+            today = pd.Timestamp.now()
+            # Keep rows where invoice_date is null OR within the valid range
+            mask = df['invoice_date'].isna() | ((df['invoice_date'] >= '2025-01-01') & (df['invoice_date'] <= today))
+            df = df[mask].copy()
+
         # Data cleaning
         df['category'] = df['category'].fillna('other').str.lower().str.strip()
         df['merchant_name'] = df['merchant_name'].fillna('Unknown Vendor')

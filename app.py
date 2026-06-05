@@ -153,6 +153,7 @@ def T(fig):
 # ════════════════════════════════════════════════════════════════
 @st.cache_data(show_spinner=False)
 def load_raw_data():
+    # Cache busted to pick up date cleaning fixes
     from data_parser import parse_boc_dump, get_data_quality_report
     filepath = r"C:\Users\meghanar\Downloads\bocdata 1"
     df = parse_boc_dump(filepath)
@@ -364,8 +365,14 @@ def main():
         if not valid.empty:
             min_d = valid["invoice_date"].min().date()
             max_d = valid["invoice_date"].max().date()
-            date_range = st.date_input("📅 Date Range", value=(min_d, max_d),
-                                       min_value=min_d, max_value=max_d)
+            st.markdown("**📅 Date Range**")
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input("From", value=min_d, min_value=min_d, max_value=max_d)
+            with col2:
+                end_date = st.date_input("To", value=max_d, min_value=min_d, max_value=max_d)
+            
+            date_range = (start_date, end_date)
         else:
             date_range = None
 
@@ -480,7 +487,7 @@ def main():
         nc   = fdf["category_display"].nunique()
         ncur = fdf["currency"].nunique()
 
-        mth  = fdf.dropna(subset=["invoice_date"]).set_index("invoice_date").resample("M")["total_amount"].sum()
+        mth  = fdf.dropna(subset=["invoice_date"]).set_index("invoice_date").resample("ME")["total_amount"].sum()
         mom  = ((mth.iloc[-1] - mth.iloc[-2]) / mth.iloc[-2] * 100) if len(mth) >= 2 and mth.iloc[-2] > 0 else 0.0
 
         c1,c2,c3,c4,c5,c6 = st.columns(6)
@@ -642,7 +649,7 @@ def main():
         ts   = fdf["total_amount"].sum()
         ai   = fdf["total_amount"].mean()
         med  = fdf["total_amount"].median()
-        mth  = fdf.dropna(subset=["invoice_date"]).set_index("invoice_date").resample("M")["total_amount"].sum()
+        mth  = fdf.dropna(subset=["invoice_date"]).set_index("invoice_date").resample("ME")["total_amount"].sum()
         mom  = ((mth.iloc[-1]-mth.iloc[-2])/mth.iloc[-2]*100) if len(mth)>=2 and mth.iloc[-2]>0 else 0.0
 
         c1,c2,c3,c4 = st.columns(4)
@@ -1311,7 +1318,7 @@ def main():
             lifetime_pts  = int(user_profile.get("lifetime_points", 0))
 
             # Monthly stats for MoM growth
-            umth = udf_user.dropna(subset=["invoice_date"]).set_index("invoice_date").resample("M")["total_amount"].sum()
+            umth = udf_user.dropna(subset=["invoice_date"]).set_index("invoice_date").resample("ME")["total_amount"].sum()
             umom = ((umth.iloc[-1]-umth.iloc[-2])/umth.iloc[-2]*100) if len(umth)>=2 and umth.iloc[-2]>0 else 0.0
             avg_monthly   = umth.mean() if len(umth) else 0
 
@@ -1621,9 +1628,10 @@ def main():
                 ensemble_fc = [(l+e)/2 for l,e in zip(linear_fc,ema_fc)]
 
                 # Build date axis
-                last_date = umth.index[-1]
-                future_dates = pd.date_range(last_date, periods=7, freq="M")[1:]
-                hist_dates   = umth.index.to_timestamp()
+                # umth.index is already a DatetimeIndex (resample returns DatetimeIndex)
+                hist_dates   = umth.index
+                last_date    = hist_dates[-1]
+                future_dates = pd.date_range(last_date, periods=7, freq="ME")[1:]
 
                 # KPI forecast cards
                 f1,f2,f3 = st.columns(3)

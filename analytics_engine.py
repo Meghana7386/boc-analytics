@@ -22,7 +22,7 @@ def compute_spend_kpis(df: pd.DataFrame) -> Dict[str, Any]:
     total_invoices = len(df)
     
     # Monthly spend for growth calc
-    monthly = df.dropna(subset=['invoice_date']).set_index('invoice_date').resample('M')['total_amount'].sum()
+    monthly = df.dropna(subset=['invoice_date']).set_index('invoice_date').resample('ME')['total_amount'].sum()
     if len(monthly) >= 2:
         recent = monthly.iloc[-1]
         prev = monthly.iloc[-2]
@@ -427,7 +427,7 @@ def generate_alerts(df: pd.DataFrame) -> List[Dict]:
 def spend_forecast(df: pd.DataFrame, periods: int = 6) -> pd.DataFrame:
     """Simple spend forecasting using exponential smoothing and linear regression."""
     dff = df.dropna(subset=['invoice_date', 'total_amount']).copy()
-    monthly = dff.set_index('invoice_date').resample('M')['total_amount'].sum().reset_index()
+    monthly = dff.set_index('invoice_date').resample('ME')['total_amount'].sum().reset_index()
     monthly.columns = ['date', 'spend']
     monthly = monthly[monthly['spend'] > 0].sort_values('date')
     
@@ -446,7 +446,7 @@ def spend_forecast(df: pd.DataFrame, periods: int = 6) -> pd.DataFrame:
     
     # Forecast future periods
     last_date = monthly['date'].max()
-    future_dates = pd.date_range(start=last_date + pd.DateOffset(months=1), periods=periods, freq='M')
+    future_dates = pd.date_range(start=last_date + pd.DateOffset(months=1), periods=periods, freq='ME')
     future_t = range(len(monthly), len(monthly) + periods)
     
     linear_forecast = np.polyval(coeffs, list(future_t))
