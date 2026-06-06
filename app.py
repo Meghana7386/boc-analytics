@@ -18,7 +18,6 @@ warnings.filterwarnings("ignore")
 # ── Page config ────────────────────────────────────────────────
 st.set_page_config(
     page_title="BOC Procurement Analytics",
-    page_icon="⛓️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -30,121 +29,214 @@ st.markdown("""
 
   html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
-  .stApp { background: linear-gradient(135deg, #0F0F1A 0%, #1A1A2E 50%, #0F0F1A 100%); }
+  .stApp { background: #F8FAFC; }
 
+  /* ── Sidebar Styling ─────────────────────────────── */
   [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #1A1A2E 0%, #16213E 100%);
-    border-right: 1px solid rgba(108,92,231,0.3);
+    background: #FFFFFF;
+    border-right: 1px solid #E2E8F0;
+    min-width: 280px !important;
+    max-width: 300px !important;
+  }
+  
+  [data-testid="stSidebar"] > div > div > div > div > div > .stMarkdown,
+  [data-testid="stSidebar"] > div > div > div > div > div > .stMarkdown * {
+    color: #0F172A !important;
+  }
+  [data-testid="stSidebar"] label {
+    color: #475569 !important;
+  }
+  [data-testid="stSidebar"] .stMarkdown h3,
+  [data-testid="stSidebar"] .stMarkdown h4 {
+    color: #0F172A !important;
+  }
+  [data-testid="stSidebar"] hr {
+    border-color: #F1F5F9 !important;
   }
 
-  .kpi-card {
-    background: linear-gradient(135deg, rgba(108,92,231,0.15) 0%, rgba(0,206,201,0.08) 100%);
-    border: 1px solid rgba(108,92,231,0.4);
-    border-radius: 16px;
-    padding: 1.2rem 1.4rem;
-    margin-bottom: 1rem;
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
+  /* Force filter inputs and dropdowns to have light backgrounds */
+  [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"], 
+  [data-testid="stSidebar"] .stMultiSelect div[data-baseweb="select"],
+  [data-testid="stSidebar"] .stDateInput div[data-baseweb="input"],
+  [data-testid="stSidebar"] .stTextInput div[data-baseweb="input"] {
+      background-color: #FFFFFF !important;
+      border: 1px solid #E2E8F0 !important;
+      border-radius: 8px !important;
   }
-  .kpi-card:hover { border-color: rgba(108,92,231,0.8); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(108,92,231,0.2); }
-  .kpi-label  { font-size: 0.72rem; font-weight: 600; color: #a29bfe; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 4px; }
-  .kpi-value  { font-size: 1.75rem; font-weight: 800; color: #ffffff; line-height: 1; }
-  .kpi-delta  { font-size: 0.75rem; font-weight: 500; margin-top: 6px; }
-  .kpi-delta.pos { color: #00cec9; } .kpi-delta.neg { color: #ff7675; }
+  [data-testid="stSidebar"] div[data-baseweb="select"] span,
+  [data-testid="stSidebar"] div[data-baseweb="select"] div,
+  [data-testid="stSidebar"] div[data-baseweb="select"] input,
+  [data-testid="stSidebar"] div[data-baseweb="input"] input,
+  [data-testid="stSidebar"] .stDateInput input,
+  [data-testid="stSidebar"] .stTextInput input,
+  [data-testid="stSidebar"] .stSelectbox svg,
+  [data-testid="stSidebar"] .stMultiSelect span[class*="tag"] {
+      color: #0F172A !important;
+      -webkit-text-fill-color: #0F172A !important;
+  }
+  [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div {
+      color: #0F172A !important;
+  }
+  div[data-baseweb="popover"] *,
+  div[data-baseweb="popover"] li,
+  div[data-baseweb="menu"] * {
+      color: #0F172A !important;
+      background-color: #FFFFFF !important;
+  }
+  div[data-baseweb="popover"] li:hover {
+      background-color: #F8FAFC !important;
+  }
+
+  /* ── KPI Cards (Dark Green from reference screenshot) ──────── */
+  .kpi-card {
+    background: #1A3626;
+    border: none;
+    border-radius: 20px;
+    padding: 1.5rem 1.4rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(26, 54, 38, 0.3); }
+  .kpi-label  { font-size: 0.85rem; font-weight: 500; color: #A3B8AA; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-value  { font-size: 2.2rem; font-weight: 700; color: #FFFFFF; line-height: 1; white-space: nowrap; }
+  .kpi-delta  { font-size: 0.8rem; font-weight: 500; margin-top: 10px; display: inline-block; }
+  .kpi-delta.pos { color: #A7F3D0; } 
+  .kpi-delta.neg { color: #FECACA; }
 
   .section-title {
-    font-size: 1.1rem; font-weight: 700; color: #a29bfe;
-    border-left: 3px solid #6c5ce7; padding-left: 10px;
-    margin: 1.5rem 0 1rem 0; text-transform: uppercase; letter-spacing: 0.8px;
+    font-size: 1.25rem; font-weight: 700; color: #0F172A;
+    border-left: 4px solid #F59E0B; padding-left: 12px;
+    margin: 1.5rem 0 1rem 0; letter-spacing: 0.5px;
   }
 
   /* Active filter banner */
   .filter-banner {
-    background: linear-gradient(135deg, rgba(0,206,201,0.1) 0%, rgba(108,92,231,0.1) 100%);
-    border: 1px solid rgba(0,206,201,0.35);
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
     border-radius: 12px;
-    padding: 0.75rem 1.2rem;
-    margin-bottom: 1.2rem;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.5rem;
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
   }
   .filter-tag {
-    background: rgba(108,92,231,0.25);
-    border: 1px solid rgba(108,92,231,0.5);
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
     border-radius: 20px;
-    padding: 3px 12px;
-    font-size: 0.78rem; font-weight: 600; color: #a29bfe;
+    padding: 6px 14px;
+    font-size: 0.8rem; font-weight: 600; color: #0F172A;
     display: inline-block;
   }
   .filter-count {
-    background: rgba(0,206,201,0.2);
-    border: 1px solid rgba(0,206,201,0.5);
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
     border-radius: 20px;
-    padding: 3px 12px;
-    font-size: 0.78rem; font-weight: 700; color: #00cec9;
+    padding: 6px 14px;
+    font-size: 0.8rem; font-weight: 600; color: #475569;
     display: inline-block; margin-left: auto;
   }
 
-  .alert-high   { background: rgba(255,118,117,0.12); border: 1px solid rgba(255,118,117,0.4); border-radius:10px; padding:0.8rem 1rem; margin:0.4rem 0; }
-  .alert-medium { background: rgba(253,203,110,0.12); border: 1px solid rgba(253,203,110,0.4); border-radius:10px; padding:0.8rem 1rem; margin:0.4rem 0; }
-  .alert-low    { background: rgba(116,185,255,0.12); border: 1px solid rgba(116,185,255,0.4); border-radius:10px; padding:0.8rem 1rem; margin:0.4rem 0; }
-  .alert-text   { font-size: 0.85rem; color: #e0e0e0; }
-  .alert-type   { font-size: 0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
-  .alert-type.high   { color: #ff7675; }
-  .alert-type.medium { color: #fdcb6e; }
-  .alert-type.low    { color: #74b9ff; }
+  .alert-high   { background: #FEF2F2; border: 1px solid #FCA5A5; padding:0.8rem 1rem; margin:0.4rem 0; border-radius: 12px; }
+  .alert-medium { background: #FFFBEB; border: 1px solid #FDE68A; padding:0.8rem 1rem; margin:0.4rem 0; border-radius: 12px; }
+  .alert-low    { background: #F0FDF4; border: 1px solid #A7F3D0; padding:0.8rem 1rem; margin:0.4rem 0; border-radius: 12px; }
+  .alert-text   { font-size: 0.85rem; color: #334155; }
+  .alert-type   { font-size: 0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+  .alert-type.high   { color: #DC2626; }
+  .alert-type.medium { color: #D97706; }
+  .alert-type.low    { color: #059669; }
 
-  .badge-preferred  { background: rgba(0,206,201,0.2); color:#00cec9; border:1px solid rgba(0,206,201,0.5); border-radius:6px; padding:2px 10px; font-size:0.72rem; font-weight:600; }
-  .badge-good       { background: rgba(108,92,231,0.2); color:#a29bfe; border:1px solid rgba(108,92,231,0.5); border-radius:6px; padding:2px 10px; font-size:0.72rem; font-weight:600; }
-  .badge-watchlist  { background: rgba(253,203,110,0.2); color:#fdcb6e; border:1px solid rgba(253,203,110,0.5); border-radius:6px; padding:2px 10px; font-size:0.72rem; font-weight:600; }
-  .badge-risk       { background: rgba(255,118,117,0.2); color:#ff7675; border:1px solid rgba(255,118,117,0.5); border-radius:6px; padding:2px 10px; font-size:0.72rem; font-weight:600; }
+  .badge-preferred  { background: #ECFDF5; color:#059669; border:1px solid #A7F3D0; border-radius:12px; padding:2px 10px; font-size:0.75rem; font-weight:500; }
+  .badge-good       { background: #EFF6FF; color:#2563EB; border:1px solid #BFDBFE; border-radius:12px; padding:2px 10px; font-size:0.75rem; font-weight:500; }
+  .badge-watchlist  { background: #FFFBEB; color:#D97706; border:1px solid #FDE68A; border-radius:12px; padding:2px 10px; font-size:0.75rem; font-weight:500; }
+  .badge-risk       { background: #FEF2F2; color:#DC2626; border:1px solid #FECACA; border-radius:12px; padding:2px 10px; font-size:0.75rem; font-weight:500; }
 
-  .stTabs [data-baseweb="tab-list"] { background: rgba(26,26,46,0.8); border-radius: 12px; padding: 4px; gap: 4px; }
-  .stTabs [data-baseweb="tab"] { border-radius:8px; padding:8px 16px; color:#a29bfe; font-weight:500; }
-  .stTabs [aria-selected="true"] { background: linear-gradient(135deg,#6c5ce7,#4ecdc4) !important; color:white !important; }
+  .stTabs [data-baseweb="tab-list"] { 
+    background: transparent; 
+    border-bottom: 1px solid #E2E8F0; 
+    gap: 0; 
+    padding-bottom: 0px;
+    overflow-x: auto;
+    white-space: nowrap;
+    display: flex;
+    justify-content: flex-start;
+  }
+  .stTabs [data-baseweb="tab"] { 
+    color:#64748B; font-weight:500; border-radius: 0; 
+    padding: 12px 20px; padding-bottom: 12px; 
+    flex-shrink: 0;
+    font-size: 0.9rem;
+  }
+  .stTabs [aria-selected="true"] { color:#1A3626 !important; border-bottom: 3px solid #1A3626; font-weight: 600; }
+  .stTabs [aria-selected="true"] * { color:#1A3626 !important; }
 
-  hr { border: none; border-top: 1px solid rgba(108,92,231,0.2); margin: 1.5rem 0; }
-  .dataframe { background: rgba(26,26,46,0.8) !important; }
+  hr { border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0; }
+  
+  .dataframe { background: #FFFFFF !important; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .dataframe th { background: #F8FAFC !important; color: #0F172A !important; border-bottom: 1px solid #E2E8F0 !important; font-weight: 600; }
+  .dataframe td { border-bottom: 1px solid #F1F5F9 !important; color: #334155 !important; }
 
   .logo-header {
-    background: linear-gradient(135deg, rgba(108,92,231,0.2) 0%, rgba(0,206,201,0.1) 100%);
-    border: 1px solid rgba(108,92,231,0.3); border-radius:16px; padding:1.5rem; text-align:center; margin-bottom:1.5rem;
+    background: #FFFFFF;
+    border-bottom: 1px solid #E2E8F0; padding:1.5rem; text-align:center; margin-bottom:1.5rem;
   }
-  .logo-title { font-size:1.6rem; font-weight:800; color:#fff; }
-  .logo-sub   { font-size:0.75rem; color:#a29bfe; margin-top:4px; letter-spacing:1px; }
+  .logo-title { font-size:1.4rem; font-weight:800; color:#0F172A; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .logo-sub   { font-size:0.75rem; color:#64748B; margin-top:4px; letter-spacing:0.5px; text-transform: uppercase; font-weight: 600; }
+
+  /* ── Reduce main content padding for wider layout ─────── */
+  .main .block-container {
+    padding-top: 1rem !important;
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+    max-width: 100% !important;
+  }
+
+  /* ── General typography ────────────────────────────────── */
+  h1, h2, h3, h4, h5, h6 { color: #0F172A !important; }
+  p, span, li { color: #475569; }
+
+  /* ── Responsive media queries ──────────────────────────── */
+  @media (max-width: 1366px) {
+    .kpi-card { padding: 1.2rem; min-height: 100px; }
+    .kpi-value { font-size: 1.8rem; }
+  }
 </style>
 """, unsafe_allow_html=True)
 
 # ── Plotly template ────────────────────────────────────────────
-PALETTE = ["#6c5ce7","#00cec9","#fd79a8","#fdcb6e","#74b9ff","#a29bfe","#55efc4","#e17055","#fab1a0","#81ecec"]
+PALETTE = ["#1A3626", "#F59E0B", "#10B981", "#3B82F6", "#6366F1", "#8B5CF6", "#EC4899", "#14B8A6", "#EAB308", "#64748B"]
 
 CHART_LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(26,26,46,0.6)",
-    font=dict(family="Inter", color="#e0e0e0", size=12),
-    title_font=dict(family="Inter", color="#ffffff", size=14),
-    legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="rgba(108,92,231,0.3)", borderwidth=1),
-    xaxis=dict(gridcolor="rgba(108,92,231,0.15)", linecolor="rgba(108,92,231,0.3)", title=""),
-    yaxis=dict(gridcolor="rgba(108,92,231,0.15)", linecolor="rgba(108,92,231,0.3)", title=""),
+    plot_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="Inter", color="#475569", size=12),
+    title_font=dict(family="Inter", color="#0F172A", size=14),
+    legend=dict(bgcolor="rgba(255,255,255,0.8)", bordercolor="#E2E8F0", borderwidth=1),
+    xaxis=dict(gridcolor="#E2E8F0", linecolor="#E2E8F0", title=""),
+    yaxis=dict(gridcolor="#E2E8F0", linecolor="#E2E8F0", title=""),
     colorway=PALETTE,
 )
 
 def T(fig):
-    """Apply dark theme layout WITHOUT wiping chart-specific axis settings."""
+    """Apply dashboard light layout."""
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(26,26,46,0.6)",
-        font=dict(family="Inter", color="#e0e0e0", size=12),
-        title_font=dict(family="Inter", color="#ffffff", size=14),
-        legend=dict(bgcolor="rgba(0,0,0,0)",
-                    bordercolor="rgba(108,92,231,0.3)", borderwidth=1),
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter", color="#475569", size=12),
+        title_font=dict(family="Inter", color="#0F172A", size=14),
+        legend=dict(bgcolor="rgba(255,255,255,0.8)",
+                    bordercolor="#E2E8F0", borderwidth=1),
         colorway=PALETTE,
         margin=dict(l=20, r=20, t=40, b=20),
     )
-    # Apply grid/line colours to existing axes without overwriting type/title
-    fig.update_xaxes(gridcolor="rgba(108,92,231,0.15)",
-                     linecolor="rgba(108,92,231,0.3)")
-    fig.update_yaxes(gridcolor="rgba(108,92,231,0.15)",
-                     linecolor="rgba(108,92,231,0.3)")
+    fig.update_xaxes(gridcolor="#E2E8F0",
+                     linecolor="#E2E8F0")
+    fig.update_yaxes(gridcolor="#E2E8F0",
+                     linecolor="#E2E8F0")
     return fig
 
 
@@ -310,7 +402,7 @@ def fmt(val):
     if abs(val) >= 1e3: return f"{val/1e3:.1f}K"
     return f"{val:,.0f}"
 
-def kpi_card(label, value, delta=None, pos=True, icon="📊"):
+def kpi_card(label, value, delta=None, pos=True, icon=""):
     d = ""
     if delta is not None:
         cls = "pos" if pos else "neg"
@@ -332,13 +424,13 @@ def filter_banner(sel_currency, sel_cats, sel_vendor, date_range, n_records):
     """Renders active filter summary bar at top of each tab."""
     tags = []
     if date_range and len(date_range) == 2:
-        tags.append(f"📅 {date_range[0]} → {date_range[1]}")
+        tags.append(f"{date_range[0]} → {date_range[1]}")
     if sel_currency != "All":
-        tags.append(f"💱 {sel_currency}")
+        tags.append(f"{sel_currency}")
     if sel_cats:
-        tags.append("🏷️ " + ", ".join(sel_cats))
+        tags.append("" + ", ".join(sel_cats))
     if sel_vendor != "All":
-        tags.append(f"🏪 {sel_vendor}")
+        tags.append(f"{sel_vendor}")
     if not tags:
         tags.append("🌐 All Data")
     tags_html = "".join(f'<span class="filter-tag">{t}</span>' for t in tags)
@@ -346,7 +438,7 @@ def filter_banner(sel_currency, sel_cats, sel_vendor, date_range, n_records):
         f'<div class="filter-banner">'
         f'<span style="font-size:0.78rem;color:#e0e0e0;font-weight:600;">Active Filters:</span> '
         f'{tags_html}'
-        f'<span class="filter-count">📊 {n_records:,} records</span>'
+        f'<span class="filter-count">{n_records:,} records</span>'
         f'</div>',
         unsafe_allow_html=True
     )
@@ -365,18 +457,18 @@ def main():
     with st.sidebar:
         st.markdown("""
         <div class="logo-header">
-          <div class="logo-title">⛓️ BOC Analytics</div>
+          <div class="logo-title">BOC Analytics</div>
           <div class="logo-sub">BILL-ON-CHAIN | PROCUREMENT INTELLIGENCE</div>
         </div>""", unsafe_allow_html=True)
 
-        st.markdown("### 🔧 Filters")
+        st.markdown("### Filters")
 
         # 1. Date Range
         valid = df_full.dropna(subset=["invoice_date"])
         if not valid.empty:
             min_d = valid["invoice_date"].min().date()
             max_d = valid["invoice_date"].max().date()
-            st.markdown("**📅 Date Range**")
+            st.markdown("**Date Range**")
             col1, col2 = st.columns(2)
             with col1:
                 start_date = st.date_input("From", value=min_d, min_value=min_d, max_value=max_d)
@@ -389,19 +481,19 @@ def main():
 
         # 2. Currency
         currencies = ["All"] + sorted(df_full["currency"].dropna().unique().tolist())
-        sel_currency = st.selectbox("💱 Currency", currencies)
+        sel_currency = st.selectbox("Currency", currencies)
 
         # 3. Category (multi-select)
         all_cats = sorted(df_full["category_display"].dropna().unique().tolist())
-        sel_cats = st.multiselect("🏷️ Categories", all_cats, default=[], placeholder="All categories")
+        sel_cats = st.multiselect("Categories", all_cats, default=[], placeholder="All categories")
 
         # 4. Vendor
         all_vendors = ["All"] + sorted(df_full["merchant_name"].dropna().unique().tolist())
-        sel_vendor = st.selectbox("🏪 Vendor", all_vendors)
+        sel_vendor = st.selectbox("Vendor", all_vendors)
 
         # ── User Analytics Filter ─────────────────────────────
         st.markdown("---")
-        st.markdown("### 👤 User Analytics")
+        st.markdown("### User Analytics")
 
         has_users = "user_id" in df_full.columns and "user_email" in df_full.columns
         sel_user = "All"
@@ -409,7 +501,7 @@ def main():
 
         if has_users:
             # Email text search
-            email_query = st.text_input("🔍 Enter User Email", value="",
+            email_query = st.text_input("Enter User Email", value="",
                                         placeholder="e.g. user@example.com")
 
             # Build user list for dropdown
@@ -428,7 +520,7 @@ def main():
             ]
             user_ids    = ["All"] + user_opts_df["user_id"].tolist()
 
-            chosen_label = st.selectbox("👤 Select User", user_labels)
+            chosen_label = st.selectbox("Select User", user_labels)
             chosen_idx   = user_labels.index(chosen_label)
             sel_user     = user_ids[chosen_idx]
 
@@ -436,7 +528,7 @@ def main():
                 # Grab this user's full profile row
                 sel_user_row = user_opts_df[user_opts_df["user_id"] == sel_user].iloc[0]
         else:
-            st.caption("⚠️ User data not available in this dataset.")
+            st.caption("User data not available in this dataset.")
 
         st.markdown("---")
 
@@ -445,7 +537,7 @@ def main():
                                     sel_vendor, sel_user)
 
         # Sidebar summary (reflects filtered data)
-        st.markdown("### 📊 Filtered Summary")
+        st.markdown("### Filtered Summary")
         st.metric("Records",        f"{len(filtered_df):,}")
         st.metric("Unique Vendors",  f"{filtered_df['merchant_name'].nunique():,}")
         st.metric("Currencies",      f"{filtered_df['currency'].nunique()}")
@@ -459,7 +551,7 @@ def main():
 
     # ── GUARD — empty filter result ───────────────────────────
     if filtered_df.empty:
-        st.warning("⚠️ No records match the selected filters. Please broaden your selection.")
+        st.warning("No records match the selected filters. Please broaden your selection.")
         return
 
     # ── COMPUTE ALL ANALYTICS on filtered_df ─────────────────
@@ -470,22 +562,22 @@ def main():
     # TABS
     # ════════════════════════════════════════════════════════════
     tabs = st.tabs([
-        "🏠 Executive Dashboard",
-        "📈 Spend Analytics",
-        "💰 Cost Optimization",
-        "🏪 Vendor Analytics",
-        "📉 Market Trends",
-        "🔮 Forecasting",
-        "🚨 Anomaly Detection",
-        "👤 User Analytics",
-        "🌍 Region Analytics",
+        "Executive Dashboard",
+        "Spend Analytics",
+        "Cost Optimization",
+        "Vendor Analytics",
+        "Market Trends",
+        "Forecasting",
+        "Anomaly Detection",
+        "User Analytics",
+        "Region Analytics",
     ])
 
     # ──────────────────────────────────────────────────────────
     # TAB 1 — EXECUTIVE DASHBOARD
     # ──────────────────────────────────────────────────────────
     with tabs[0]:
-        st.markdown("## 🏠 Executive Dashboard")
+        st.markdown("## Executive Dashboard")
         filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
 
         # ── KPIs directly from filtered_df ─────────────────
@@ -505,17 +597,17 @@ def main():
         with c1: st.markdown(kpi_card("Total Spend",    fmt(ts),        icon="💸"), unsafe_allow_html=True)
         with c2: st.markdown(kpi_card("Avg Invoice",    fmt(ai),        icon="🧾"), unsafe_allow_html=True)
         with c3: st.markdown(kpi_card("Total Invoices", f"{ni:,}",      icon="📋"), unsafe_allow_html=True)
-        with c4: st.markdown(kpi_card("Unique Vendors", f"{nv:,}",      icon="🏪"), unsafe_allow_html=True)
-        with c5: st.markdown(kpi_card("Categories",     f"{nc}",        icon="🏷️"), unsafe_allow_html=True)
+        with c4: st.markdown(kpi_card("Unique Vendors", f"{nv:,}",      icon=""), unsafe_allow_html=True)
+        with c5: st.markdown(kpi_card("Categories",     f"{nc}",        icon=""), unsafe_allow_html=True)
         with c6: st.markdown(kpi_card("MoM Growth",     f"{mom:+.1f}%",
-                                       delta=f"{abs(mom):.1f}% vs prev month", pos=mom>=0, icon="📊"), unsafe_allow_html=True)
+                                       delta=f"{abs(mom):.1f}% vs prev month", pos=mom>=0, icon=""), unsafe_allow_html=True)
 
         st.markdown("---")
 
         # ── Monthly Spend Trend ───────────────────────────────
         col_left, col_right = st.columns([2, 1])
         with col_left:
-            st.markdown('<div class="section-title">📈 Monthly Spend Trend</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Monthly Spend Trend</div>', unsafe_allow_html=True)
             _mt = fdf.dropna(subset=["invoice_date","total_amount"]).copy()
 
             # Filter out date outliers (keep 98th-percentile window ± 3 yrs)
@@ -571,7 +663,7 @@ def main():
                 st.info("No date data available for trend chart.")
 
         with col_right:
-            st.markdown('<div class="section-title">🏷️ Spend by Category</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Spend by Category</div>', unsafe_allow_html=True)
             _cat = fdf.groupby("category_display")["total_amount"].sum().reset_index()
             _cat.columns = ["category_display","total_spend"]
             _cat = _cat.sort_values("total_spend", ascending=False)
@@ -586,7 +678,7 @@ def main():
         col_a, col_b, col_c = st.columns(3)
 
         with col_a:
-            st.markdown('<div class="section-title">🏆 Top 10 Vendors</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Top 10 Vendors</div>', unsafe_allow_html=True)
             _vs = fdf.groupby("merchant_name").agg(
                 total_spend=("total_amount","sum"),
                 invoice_count=("bill_id","count"),
@@ -601,7 +693,7 @@ def main():
                 T(fig); st.plotly_chart(fig, use_container_width=True)
 
         with col_b:
-            st.markdown('<div class="section-title">💱 Currency Distribution</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Currency Distribution</div>', unsafe_allow_html=True)
             _cur = fdf.groupby("currency").agg(
                 total_spend=("total_amount","sum"),
                 invoice_count=("bill_id","count"),
@@ -639,7 +731,7 @@ def main():
 
         # ── Alerts ───────────────────────────────────────────
         st.markdown("---")
-        st.markdown('<div class="section-title">🚨 Live Procurement Alerts</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Live Procurement Alerts</div>', unsafe_allow_html=True)
         _alerts = ana["alerts"]
         if _alerts:
             cols = st.columns(min(3, len(_alerts)))
@@ -647,13 +739,13 @@ def main():
                 with cols[i % len(cols)]:
                     st.markdown(alert_html(a), unsafe_allow_html=True)
         else:
-            st.success("✅ No critical alerts detected.")
+            st.success("No critical alerts detected.")
 
     # ──────────────────────────────────────────────────────────
     # TAB 2 — SPEND ANALYTICS
     # ──────────────────────────────────────────────────────────
     with tabs[1]:
-        st.markdown("## 📈 Spend Analytics")
+        st.markdown("## Spend Analytics")
         filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
 
         fdf = filtered_df
@@ -666,13 +758,13 @@ def main():
         c1,c2,c3,c4 = st.columns(4)
         with c1: st.markdown(kpi_card("Total Spend",    fmt(ts),        icon="💸"), unsafe_allow_html=True)
         with c2: st.markdown(kpi_card("Avg Invoice",    fmt(ai),        icon="🧾"), unsafe_allow_html=True)
-        with c3: st.markdown(kpi_card("Median Invoice", fmt(med),       icon="📊"), unsafe_allow_html=True)
-        with c4: st.markdown(kpi_card("Spend Growth",   f"{mom:+.1f}%", pos=mom>=0, icon="📈"), unsafe_allow_html=True)
+        with c3: st.markdown(kpi_card("Median Invoice", fmt(med),       icon=""), unsafe_allow_html=True)
+        with c4: st.markdown(kpi_card("Spend Growth",   f"{mom:+.1f}%", pos=mom>=0, icon=""), unsafe_allow_html=True)
 
         st.markdown("---")
 
         # Monthly Trend (dual-axis) — in Spend Analytics tab
-        st.markdown('<div class="section-title">📅 Monthly Spend Trend</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Monthly Spend Trend</div>', unsafe_allow_html=True)
         mt = ana["monthly_trend"].copy()
         if not mt.empty:
             # Re-format month label from "2026-05" → "May 2026"
@@ -733,7 +825,7 @@ def main():
 
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown('<div class="section-title">🏷️ Category-wise Spend</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Category-wise Spend</div>', unsafe_allow_html=True)
             cat_df = ana["cat_spend"]
             if not cat_df.empty:
                 fig = px.bar(cat_df, x="category_display", y="total_spend",
@@ -788,7 +880,7 @@ def main():
             """)
 
         st.markdown("---")
-        st.markdown('<div class="section-title">📊 Category Performance Table</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Category Performance Table</div>', unsafe_allow_html=True)
         if not cat_df.empty:
             disp = cat_df[["category_display","total_spend","invoice_count","avg_invoice","vendor_count","spend_pct"]].copy()
             disp.columns = ["Category","Total Spend","Invoices","Avg Invoice","Vendors","Spend %"]
@@ -801,7 +893,7 @@ def main():
     # TAB 3 — COST OPTIMIZATION
     # ──────────────────────────────────────────────────────────
     with tabs[2]:
-        st.markdown("## 💰 Cost Optimization")
+        st.markdown("## Cost Optimization")
         filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
 
         opt        = ana["opt_score"]
@@ -814,15 +906,15 @@ def main():
 
         c1,c2,c3,c4 = st.columns(4)
         with c1: st.markdown(kpi_card("Optimization Score", f"{opt['total_score']}/100", icon="🎯"), unsafe_allow_html=True)
-        with c2: st.markdown(kpi_card("Grade",              opt["grade"],                icon="🏆"), unsafe_allow_html=True)
-        with c3: st.markdown(kpi_card("Potential Savings",  fmt(total_savings),          icon="💰"), unsafe_allow_html=True)
-        with c4: st.markdown(kpi_card("Overpriced Vendors", f"{overpriced_n}",           icon="⚠️"), unsafe_allow_html=True)
+        with c2: st.markdown(kpi_card("Grade",              opt["grade"],                icon=""), unsafe_allow_html=True)
+        with c3: st.markdown(kpi_card("Potential Savings",  fmt(total_savings),          icon=""), unsafe_allow_html=True)
+        with c4: st.markdown(kpi_card("Overpriced Vendors", f"{overpriced_n}",           icon=""), unsafe_allow_html=True)
 
         st.markdown("---")
         col1, col2 = st.columns([3,2])
 
         with col1:
-            st.markdown('<div class="section-title">📊 Price Variance Analysis</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Price Variance Analysis</div>', unsafe_allow_html=True)
             if not pv_df.empty:
                 fig = px.scatter(pv_df.head(20),
                     x="price_variance_pct", y="vendor_total_spend",
@@ -855,7 +947,7 @@ def main():
         col3, col4 = st.columns(2)
 
         with col3:
-            st.markdown('<div class="section-title">💡 Top Savings Opportunities</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Top Savings Opportunities</div>', unsafe_allow_html=True)
             if not savings_df.empty:
                 fig = px.bar(savings_df.head(15), x="potential_savings", y="merchant_name",
                              orientation="h", color="savings_pct",
@@ -890,16 +982,16 @@ def main():
                 disp.columns = ["Vendor","Category","Vendor Avg","Category Avg","Variance %","Invoices","Leakage"]
                 disp["Vendor Avg"]   = disp["Vendor Avg"].apply(lambda x: f"{x:,.0f}")
                 disp["Category Avg"] = disp["Category Avg"].apply(lambda x: f"{x:,.0f}")
-                disp["Variance %"]   = disp["Variance %"].apply(lambda x: f"🔴 +{x:.1f}%")
+                disp["Variance %"]   = disp["Variance %"].apply(lambda x: f"+{x:.1f}%")
                 st.dataframe(disp, use_container_width=True, hide_index=True)
             else:
-                st.success("✅ No significantly overpriced vendors detected.")
+                st.success("No significantly overpriced vendors detected.")
 
     # ──────────────────────────────────────────────────────────
     # TAB 4 — VENDOR ANALYTICS
     # ──────────────────────────────────────────────────────────
     with tabs[3]:
-        st.markdown("## 🏪 Vendor Analytics")
+        st.markdown("## Vendor Analytics")
         filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
 
         scorecard = ana["scorecard"]
@@ -907,8 +999,8 @@ def main():
 
         c1,c2,c3,c4 = st.columns(4)
         for col, (cls, icon) in zip([c1,c2,c3,c4], [
-            ("Preferred Vendor","🥇"),("Good Vendor","✅"),
-            ("Watchlist Vendor","⚠️"),("High Risk Vendor","🚨")
+            ("Preferred Vendor","🥇"),("Good Vendor",""),
+            ("Watchlist Vendor",""),("High Risk Vendor","")
         ]):
             with col:
                 st.markdown(kpi_card(cls, str(class_counts.get(cls,0)), icon=icon), unsafe_allow_html=True)
@@ -917,7 +1009,7 @@ def main():
         col1, col2 = st.columns([2,1])
 
         with col1:
-            st.markdown('<div class="section-title">📊 Vendor Score Distribution</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Vendor Score Distribution</div>', unsafe_allow_html=True)
             fig = px.histogram(scorecard, x="vendor_score", nbins=20, color="classification",
                                color_discrete_map={
                                    "Preferred Vendor":"#00cec9","Good Vendor":"#a29bfe",
@@ -966,7 +1058,7 @@ def main():
         sd["total_spend"] = sd["total_spend"].apply(fmt)
         sd["avg_invoice"] = sd["avg_invoice"].apply(fmt)
         sd["classification"] = sd["classification"].apply(
-            lambda x: f"{'🥇' if x=='Preferred Vendor' else '✅' if x=='Good Vendor' else '⚠️' if x=='Watchlist Vendor' else '🚨'} {x}")
+            lambda x: f"{'🥇' if x=='Preferred Vendor' else '' if x=='Good Vendor' else '' if x=='Watchlist Vendor' else ''} {x}")
         sd.columns = ["Vendor","Score","Classification","Total Spend",
                       "Invoices","Avg Invoice","Categories","Price Score","Consistency"]
         st.dataframe(sd, use_container_width=True, hide_index=True)
@@ -975,7 +1067,7 @@ def main():
     # TAB 5 — MARKET TRENDS
     # ──────────────────────────────────────────────────────────
     with tabs[4]:
-        st.markdown("## 📉 Market Trend Analysis")
+        st.markdown("## Market Trend Analysis")
         filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
 
         cat_inf = ana["cat_inflation"]
@@ -984,7 +1076,7 @@ def main():
 
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown('<div class="section-title">📈 Category Price Inflation</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Category Price Inflation</div>', unsafe_allow_html=True)
             if not cat_inf.empty:
                 top_cats = cat_inf.groupby("category_display")["invoice_count"].sum().nlargest(6).index
                 ci_top   = cat_inf[cat_inf["category_display"].isin(top_cats)].dropna(subset=["inflation_pct"]).copy()
@@ -1026,7 +1118,7 @@ def main():
                 st.info("Insufficient data for inflation chart.")
 
         with col2:
-            st.markdown('<div class="section-title">🏪 Vendor Price Trends</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Vendor Price Trends</div>', unsafe_allow_html=True)
             if not vt.empty:
                 top_v  = vt["merchant_name"].unique()[:6]
                 vt_top = vt[vt["merchant_name"].isin(top_v)].dropna(subset=["avg_price"])
@@ -1068,31 +1160,31 @@ def main():
                 T(fig); st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("---")
-        st.markdown('<div class="section-title">🚨 All Market Alerts</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">All Market Alerts</div>', unsafe_allow_html=True)
         if alerts:
             for a in alerts:
                 st.markdown(alert_html(a), unsafe_allow_html=True)
         else:
-            st.success("✅ No active market alerts.")
+            st.success("No active market alerts.")
 
     # ──────────────────────────────────────────────────────────
     # TAB 6 — FORECASTING
     # ──────────────────────────────────────────────────────────
     with tabs[5]:
-        st.markdown("## 🔮 Spend Forecasting & Vendor Clustering")
+        st.markdown("## Spend Forecasting & Vendor Clustering")
         filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
 
         forecast_df = ana["forecast"]
         clusters_df = ana["clusters"]
 
         if not forecast_df.empty:
-            st.markdown('<div class="section-title">📊 Spend Forecast — Next 6 Months</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Spend Forecast — Next 6 Months</div>', unsafe_allow_html=True)
             hist  = forecast_df[~forecast_df["is_forecast"]].copy()
             fcast = forecast_df[ forecast_df["is_forecast"]].copy()
 
             c1,c2,c3 = st.columns(3)
             if len(fcast) >= 3:
-                with c1: st.markdown(kpi_card("Next Month",      fmt(fcast["ensemble_forecast"].iloc[0]),       icon="📅"), unsafe_allow_html=True)
+                with c1: st.markdown(kpi_card("Next Month",      fmt(fcast["ensemble_forecast"].iloc[0]),       icon=""), unsafe_allow_html=True)
                 with c2: st.markdown(kpi_card("3-Month Forecast", fmt(fcast["ensemble_forecast"].iloc[:3].sum()), icon="📆"), unsafe_allow_html=True)
                 with c3: st.markdown(kpi_card("6-Month Forecast", fmt(fcast["ensemble_forecast"].sum()),          icon="🗓️"), unsafe_allow_html=True)
 
@@ -1125,18 +1217,18 @@ def main():
             fig.update_layout(height=420, hovermode="x unified")
             T(fig); st.plotly_chart(fig, use_container_width=True)
         else:
-            st.info("📊 Insufficient data for forecasting (need ≥ 3 months).")
+            st.info("Insufficient data for forecasting (need ≥ 3 months).")
 
         st.markdown("---")
-        st.markdown('<div class="section-title">🔮 Vendor Clustering (K-Means)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Vendor Clustering (K-Means)</div>', unsafe_allow_html=True)
         if not clusters_df.empty:
             cluster_counts = clusters_df["cluster_name"].value_counts()
-            icons = {"Strategic Vendor":"🏆","Preferred Vendor":"⭐","Occasional Vendor":"🔵","Risk Vendor":"🚨","Other":"⚪"}
+            icons = {"Strategic Vendor":"","Preferred Vendor":"⭐","Occasional Vendor":"🔵","Risk Vendor":"","Other":"⚪"}
             c1,c2,c3,c4 = st.columns(4)
             for i,(name,count) in enumerate(cluster_counts.items()):
                 if i < 4:
                     with [c1,c2,c3,c4][i]:
-                        st.markdown(kpi_card(name, str(count), icon=icons.get(name,"📊")), unsafe_allow_html=True)
+                        st.markdown(kpi_card(name, str(count), icon=icons.get(name,"")), unsafe_allow_html=True)
 
             col1, col2 = st.columns([3,2])
             with col1:
@@ -1168,7 +1260,7 @@ def main():
     # TAB 7 — ANOMALY DETECTION
     # ──────────────────────────────────────────────────────────
     with tabs[6]:
-        st.markdown("## 🚨 Anomaly Detection")
+        st.markdown("## Anomaly Detection")
         filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
         st.markdown("*Using **Isolation Forest** on filtered data — anomalies are detected only within the selected scope.*")
 
@@ -1181,16 +1273,16 @@ def main():
             n_normal   = len(adf) - n_anom
 
             c1,c2,c3,c4 = st.columns(4)
-            with c1: st.markdown(kpi_card("Anomalous Invoices", f"{n_anom:,}",       icon="🚨"), unsafe_allow_html=True)
-            with c2: st.markdown(kpi_card("Anomaly Rate",        f"{anom_pct:.1f}%", icon="📊"), unsafe_allow_html=True)
+            with c1: st.markdown(kpi_card("Anomalous Invoices", f"{n_anom:,}",       icon=""), unsafe_allow_html=True)
+            with c2: st.markdown(kpi_card("Anomaly Rate",        f"{anom_pct:.1f}%", icon=""), unsafe_allow_html=True)
             with c3: st.markdown(kpi_card("Anomalous Spend",     fmt(anom_spend),    icon="💸"), unsafe_allow_html=True)
-            with c4: st.markdown(kpi_card("Normal Invoices",     f"{n_normal:,}",    icon="✅"), unsafe_allow_html=True)
+            with c4: st.markdown(kpi_card("Normal Invoices",     f"{n_normal:,}",    icon=""), unsafe_allow_html=True)
 
             st.markdown("---")
             col1, col2 = st.columns(2)
 
             with col1:
-                st.markdown('<div class="section-title">🔍 Anomaly Score Distribution</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Anomaly Score Distribution</div>', unsafe_allow_html=True)
                 fig = px.histogram(adf, x="anomaly_score", color="is_anomaly",
                                    color_discrete_map={True:"#ff7675",False:"#6c5ce7"},
                                    nbins=40, barmode="overlay",
@@ -1203,10 +1295,10 @@ def main():
             with col2:
                 st.markdown('<div class="section-title">💥 Anomalous vs Normal Spend</div>', unsafe_allow_html=True)
                 plot_df = adf.dropna(subset=["total_amount","line_items_count"]).copy()
-                plot_df["invoice_type"] = plot_df["is_anomaly"].map({True:"🚨 Anomaly",False:"✅ Normal"})
+                plot_df["invoice_type"] = plot_df["is_anomaly"].map({True:"Anomaly",False:"Normal"})
                 fig = px.scatter(plot_df, x="line_items_count", y="total_amount",
                                  color="invoice_type",
-                                 color_discrete_map={"🚨 Anomaly":"#ff7675","✅ Normal":"rgba(108,92,231,0.4)"},
+                                 color_discrete_map={"Anomaly":"#ff7675","Normal":"rgba(108,92,231,0.4)"},
                                  hover_data=["merchant_name","category_display","invoice_number","currency"],
                                  opacity=0.75,
                                  labels={"line_items_count":"Line Items","total_amount":"Amount"})
@@ -1216,7 +1308,7 @@ def main():
             st.markdown("---")
             col3, col4 = st.columns(2)
             with col3:
-                st.markdown('<div class="section-title">📊 Anomalies by Category</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Anomalies by Category</div>', unsafe_allow_html=True)
                 ac = adf[adf["is_anomaly"]].groupby("category_display").size().reset_index(name="count")
                 if not ac.empty:
                     fig = px.bar(ac, x="category_display", y="count",
@@ -1225,7 +1317,7 @@ def main():
                     T(fig); st.plotly_chart(fig, use_container_width=True)
 
             with col4:
-                st.markdown('<div class="section-title">🏪 Top Vendors with Anomalies</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Top Vendors with Anomalies</div>', unsafe_allow_html=True)
                 av = adf[adf["is_anomaly"]].groupby("merchant_name").size().reset_index(name="count")
                 av = av.sort_values("count",ascending=False).head(10)
                 if not av.empty:
@@ -1248,18 +1340,18 @@ def main():
                             "Category","Line Items","Anomaly Score"]
             st.dataframe(disp, use_container_width=True, hide_index=True)
         else:
-            st.info("📊 Run the analysis with sufficient filtered data to detect anomalies.")
+            st.info("Run the analysis with sufficient filtered data to detect anomalies.")
 
 
     # ──────────────────────────────────────────────────────────
     # TAB 8 — USER ANALYTICS
     # ──────────────────────────────────────────────────────────
     with tabs[7]:
-        st.markdown("## 👤 User Analytics")
+        st.markdown("## User Analytics")
         filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
 
         if not has_users:
-            st.warning("⚠️ User data is not available in the current dataset.")
+            st.warning("User data is not available in the current dataset.")
         elif sel_user == "All":
             # ── Show all-users overview when no user selected ─
             st.info("👆 Select a specific user from the sidebar to see their detailed profile and analytics.")
@@ -1281,7 +1373,7 @@ def main():
                 st.markdown("---")
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.markdown('<div class="section-title">🏆 Top Users by Spend</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="section-title">Top Users by Spend</div>', unsafe_allow_html=True)
                     top_u = ovu.groupby(["user_id","user_name","user_email"]).agg(
                         total_spend=("total_amount","sum"),
                         bill_count=("bill_id","count"),
@@ -1297,7 +1389,7 @@ def main():
                     T(fig); st.plotly_chart(fig, use_container_width=True)
 
                 with col2:
-                    st.markdown('<div class="section-title">📊 Bills per User Distribution</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="section-title">Bills per User Distribution</div>', unsafe_allow_html=True)
                     bills_per_user = ovu.groupby("user_id")["bill_id"].count().reset_index()
                     bills_per_user.columns = ["user_id","bill_count"]
                     fig = px.histogram(bills_per_user, x="bill_count", nbins=30,
@@ -1349,7 +1441,7 @@ def main():
                     _iso = IsolationForest(contamination=0.15, random_state=42)
                     _preds = _iso.fit_predict(_X)
                     anom_rate = (_preds == -1).mean() * 100
-                    risk_level = "🔴 High" if anom_rate > 30 else "🟡 Medium" if anom_rate > 10 else "🟢 Low"
+                    risk_level = "High" if anom_rate > 30 else "🟡 Medium" if anom_rate > 10 else "🟢 Low"
                 else:
                     anom_rate = 0
                     risk_level = "🟢 Low"
@@ -1360,7 +1452,7 @@ def main():
             # ── USER PROFILE CARD ─────────────────────────────
             did_badge = ""
             if user_profile.get("did_status") == "ready":
-                did_badge = '<span style="background:#00cec9;color:#000;border-radius:4px;padding:2px 8px;font-size:0.7rem;font-weight:700;">✅ DID Verified</span>'
+                did_badge = '<span style="background:#00cec9;color:#000;border-radius:4px;padding:2px 8px;font-size:0.7rem;font-weight:700;">DID Verified</span>'
 
             last_active_str = last_active.strftime("%Y-%m-%d") if pd.notna(last_active) else "N/A"
             st.markdown(f"""
@@ -1368,7 +1460,7 @@ def main():
                         border:1px solid rgba(108,92,231,0.4);border-radius:16px;padding:1.5rem;margin-bottom:1rem;">
               <div style="display:flex;align-items:center;gap:1rem;">
                 <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#6c5ce7,#00cec9);
-                            display:flex;align-items:center;justify-content:center;font-size:1.8rem;">👤</div>
+                            display:flex;align-items:center;justify-content:center;font-size:1.8rem;"></div>
                 <div>
                   <div style="font-size:1.4rem;font-weight:800;color:#fff;">{user_name}</div>
                   <div style="color:#a29bfe;font-size:0.9rem;">{user_email}</div>
@@ -1384,9 +1476,9 @@ def main():
                   <div style="color:#fdcb6e;font-size:1.1rem;font-weight:700;">{reward_bal:,} pts</div></div>
                 <div style="text-align:center;"><div style="color:#a29bfe;font-size:0.75rem;">🌟 Lifetime Points</div>
                   <div style="color:#fdcb6e;font-size:1.1rem;font-weight:700;">{lifetime_pts:,} pts</div></div>
-                <div style="text-align:center;"><div style="color:#a29bfe;font-size:0.75rem;">📅 Last Active</div>
+                <div style="text-align:center;"><div style="color:#a29bfe;font-size:0.75rem;">Last Active</div>
                   <div style="color:#fff;font-size:1.0rem;font-weight:600;">{last_active_str}</div></div>
-                <div style="text-align:center;"><div style="color:#a29bfe;font-size:0.75rem;">📊 Anomaly Rate</div>
+                <div style="text-align:center;"><div style="color:#a29bfe;font-size:0.75rem;">Anomaly Rate</div>
                   <div style="color:#ff7675;font-size:1.0rem;font-weight:600;">{anom_rate:.1f}%</div></div>
               </div>
             </div>
@@ -1397,9 +1489,9 @@ def main():
             with c1: st.markdown(kpi_card("Bills Uploaded", f"{total_bills:,}",    icon="📋"), unsafe_allow_html=True)
             with c2: st.markdown(kpi_card("Total Spend",    fmt(total_spend),       icon="💸"), unsafe_allow_html=True)
             with c3: st.markdown(kpi_card("Avg Bill",       fmt(avg_bill),          icon="🧾"), unsafe_allow_html=True)
-            with c4: st.markdown(kpi_card("Vendors Used",   f"{vendors_used:,}",   icon="🏪"), unsafe_allow_html=True)
-            with c5: st.markdown(kpi_card("Categories",     f"{cats_used}",         icon="🏷️"), unsafe_allow_html=True)
-            with c6: st.markdown(kpi_card("MoM Growth",     f"{umom:+.1f}%",       pos=umom>=0, icon="📈"), unsafe_allow_html=True)
+            with c4: st.markdown(kpi_card("Vendors Used",   f"{vendors_used:,}",   icon=""), unsafe_allow_html=True)
+            with c5: st.markdown(kpi_card("Categories",     f"{cats_used}",         icon=""), unsafe_allow_html=True)
+            with c6: st.markdown(kpi_card("MoM Growth",     f"{umom:+.1f}%",       pos=umom>=0, icon=""), unsafe_allow_html=True)
 
             st.markdown("---")
 
@@ -1407,7 +1499,7 @@ def main():
             col1, col2 = st.columns([3, 2])
 
             with col1:
-                st.markdown('<div class="section-title">📈 Monthly Spending Trend</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Monthly Spending Trend</div>', unsafe_allow_html=True)
                 if not udf_user.empty:
                     _u = udf_user.dropna(subset=["invoice_date","total_amount"]).copy()
                     _u["month"]      = _u["invoice_date"].dt.strftime("%b %Y")
@@ -1438,7 +1530,7 @@ def main():
                         st.info("No date data for this user.")
 
             with col2:
-                st.markdown('<div class="section-title">🏷️ Category Usage Distribution</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Category Usage Distribution</div>', unsafe_allow_html=True)
                 _cat = udf_user.groupby("category_display")["total_amount"].sum().reset_index()
                 _cat.columns = ["category","spend"]
                 _cat = _cat.sort_values("spend",ascending=False)
@@ -1453,7 +1545,7 @@ def main():
             col3, col4 = st.columns(2)
 
             with col3:
-                st.markdown('<div class="section-title">🏪 Vendor Usage Analysis</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Vendor Usage Analysis</div>', unsafe_allow_html=True)
                 _ven = udf_user.groupby("merchant_name").agg(
                     total_spend=("total_amount","sum"),
                     bill_count=("bill_id","count"),
@@ -1469,7 +1561,7 @@ def main():
                     T(fig); st.plotly_chart(fig, use_container_width=True)
 
             with col4:
-                st.markdown('<div class="section-title">📅 Bill Upload Activity (Monthly)</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Bill Upload Activity (Monthly)</div>', unsafe_allow_html=True)
                 if not udf_user.empty:
                     _act = udf_user.dropna(subset=["invoice_date"]).copy()
                     _act["month"]      = _act["invoice_date"].dt.strftime("%b %Y")
@@ -1490,7 +1582,7 @@ def main():
             col5, col6 = st.columns(2)
 
             with col5:
-                st.markdown('<div class="section-title">🏷️ Top Spending Categories</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Top Spending Categories</div>', unsafe_allow_html=True)
                 _topcat = udf_user.groupby("category_display")["total_amount"].sum().sort_values(
                     ascending=False).reset_index()
                 _topcat.columns = ["category","spend"]
@@ -1505,7 +1597,7 @@ def main():
                     T(fig); st.plotly_chart(fig, use_container_width=True)
 
             with col6:
-                st.markdown('<div class="section-title">🏆 Top Vendors Used</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Top Vendors Used</div>', unsafe_allow_html=True)
                 _topv = udf_user.groupby("merchant_name")["total_amount"].sum().sort_values(
                     ascending=False).head(10).reset_index()
                 _topv.columns = ["vendor","spend"]
@@ -1561,31 +1653,31 @@ def main():
 
             bi_col1, bi_col2, bi_col3, bi_col4 = st.columns(4)
             with bi_col1:
-                st.markdown(kpi_card("Most Used Category", most_used_cat,    icon="🏷️"), unsafe_allow_html=True)
+                st.markdown(kpi_card("Most Used Category", most_used_cat,    icon=""), unsafe_allow_html=True)
             with bi_col2:
-                st.markdown(kpi_card("Most Used Vendor",   most_used_ven,    icon="🏪"), unsafe_allow_html=True)
+                st.markdown(kpi_card("Most Used Vendor",   most_used_ven,    icon=""), unsafe_allow_html=True)
             with bi_col3:
-                st.markdown(kpi_card("Avg Monthly Spend",  fmt(avg_monthly),  icon="📅"), unsafe_allow_html=True)
+                st.markdown(kpi_card("Avg Monthly Spend",  fmt(avg_monthly),  icon=""), unsafe_allow_html=True)
             with bi_col4:
                 st.markdown(kpi_card("Avg Days Between",   avg_days_str,      icon="⏱️"), unsafe_allow_html=True)
 
             # ── AI INSIGHTS ───────────────────────────────────
             st.markdown("---")
-            st.markdown("### 💡 AI-Generated Insights")
+            st.markdown("### AI-Generated Insights")
 
             insights = []
             if cat_pct_top > 0:
-                insights.append({"icon":"📊","color":"#6c5ce7",
+                insights.append({"icon":"","color":"#6c5ce7",
                     "text":f"User spends **{cat_pct_top:.1f}%** on **{most_used_cat}** — their dominant category."})
             if vendors_used > 0:
-                insights.append({"icon":"🏪","color":"#00cec9",
+                insights.append({"icon":"","color":"#00cec9",
                     "text":f"**{most_used_ven}** is the most frequently used vendor."})
             if total_bills > 0:
                 insights.append({"icon":"📋","color":"#a29bfe",
                     "text":f"User has uploaded **{total_bills}** invoice(s) with an average bill of **{fmt(avg_bill)}**."})
             if len(umth) >= 2:
                 trend_word = "increasing" if umom > 0 else "decreasing"
-                insights.append({"icon":"📈" if umom>0 else "📉","color":"#fdcb6e" if umom>0 else "#ff7675",
+                insights.append({"icon":"" if umom>0 else "","color":"#fdcb6e" if umom>0 else "#ff7675",
                     "text":f"Spend is **{trend_word}** — MoM change: **{umom:+.1f}%**."})
             if reward_bal > 0:
                 insights.append({"icon":"💎","color":"#fdcb6e",
@@ -1594,12 +1686,12 @@ def main():
                 insights.append({"icon":"⚡","color":"#00cec9",
                     "text":f"Very high purchase frequency — average **{avg_days_str}** between bills."})
             if anom_rate > 15:
-                insights.append({"icon":"⚠️","color":"#ff7675",
+                insights.append({"icon":"","color":"#ff7675",
                     "text":f"Anomaly rate of **{anom_rate:.1f}%** detected. Review suspicious transactions."})
             # Forecast next month
             if len(umth) >= 2:
                 next_month_est = umth.mean() * (1 + umom/100)
-                insights.append({"icon":"🔮","color":"#74b9ff",
+                insights.append({"icon":"","color":"#74b9ff",
                     "text":f"Estimated next-month spend: **{fmt(next_month_est)}** based on current trend."})
 
             if insights:
@@ -1614,7 +1706,7 @@ def main():
 
             # ── USER FORECASTING ──────────────────────────────
             st.markdown("---")
-            st.markdown("### 🔮 User Spend Forecast")
+            st.markdown("### User Spend Forecast")
 
             if len(umth) >= 3:
                 import numpy as np
@@ -1646,7 +1738,7 @@ def main():
 
                 # KPI forecast cards
                 f1,f2,f3 = st.columns(3)
-                with f1: st.markdown(kpi_card("Next Month",      fmt(ensemble_fc[0]),        icon="📅"), unsafe_allow_html=True)
+                with f1: st.markdown(kpi_card("Next Month",      fmt(ensemble_fc[0]),        icon=""), unsafe_allow_html=True)
                 with f2: st.markdown(kpi_card("3-Month Total",   fmt(sum(ensemble_fc[:3])),  icon="📆"), unsafe_allow_html=True)
                 with f3: st.markdown(kpi_card("6-Month Total",   fmt(sum(ensemble_fc)),      icon="🗓️"), unsafe_allow_html=True)
 
@@ -1675,11 +1767,11 @@ def main():
                 fig.update_layout(height=380, hovermode="x unified")
                 T(fig); st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info("📊 Need at least 3 months of data to generate a forecast for this user.")
+                st.info("Need at least 3 months of data to generate a forecast for this user.")
 
             # ── USER ANOMALY DETECTION ────────────────────────
             st.markdown("---")
-            st.markdown("### 🚨 User Anomaly Detection")
+            st.markdown("### User Anomaly Detection")
 
             if len(udf_user) >= 3:
                 try:
@@ -1698,14 +1790,14 @@ def main():
                     anom_sp2   = udf_anom[udf_anom["is_anomaly"]]["total_amount"].sum()
 
                     ac1,ac2,ac3 = st.columns(3)
-                    with ac1: st.markdown(kpi_card("Anomalies Found", f"{n_anom2}",          icon="🚨"), unsafe_allow_html=True)
-                    with ac2: st.markdown(kpi_card("Anomaly Rate",    f"{anom_pct2:.1f}%",   icon="📊"), unsafe_allow_html=True)
+                    with ac1: st.markdown(kpi_card("Anomalies Found", f"{n_anom2}",          icon=""), unsafe_allow_html=True)
+                    with ac2: st.markdown(kpi_card("Anomaly Rate",    f"{anom_pct2:.1f}%",   icon=""), unsafe_allow_html=True)
                     with ac3: st.markdown(kpi_card("Anomalous Spend", fmt(anom_sp2),          icon="💸"), unsafe_allow_html=True)
 
                     st.markdown("---")
                     col_a, col_b = st.columns(2)
                     with col_a:
-                        st.markdown('<div class="section-title">🔍 Score Distribution</div>', unsafe_allow_html=True)
+                        st.markdown('<div class="section-title">Score Distribution</div>', unsafe_allow_html=True)
                         fig = px.histogram(udf_anom, x="anomaly_score",
                                            color="is_anomaly",
                                            color_discrete_map={True:"#ff7675",False:"#6c5ce7"},
@@ -1719,8 +1811,8 @@ def main():
                     with col_b:
                         st.markdown('<div class="section-title">💥 Amount vs Line Items</div>', unsafe_allow_html=True)
                         fig = px.scatter(udf_anom, x="line_items_count", y="total_amount",
-                                         color=udf_anom["is_anomaly"].map({True:"🚨 Anomaly",False:"✅ Normal"}),
-                                         color_discrete_map={"🚨 Anomaly":"#ff7675","✅ Normal":"rgba(108,92,231,0.5)"},
+                                         color=udf_anom["is_anomaly"].map({True:"Anomaly",False:"Normal"}),
+                                         color_discrete_map={"Anomaly":"#ff7675","Normal":"rgba(108,92,231,0.5)"},
                                          hover_data=["merchant_name","invoice_number","invoice_date"],
                                          labels={"line_items_count":"Line Items","total_amount":"Amount",
                                                  "color":"Type"})
@@ -1744,19 +1836,19 @@ def main():
                                             "Amount","Category","Line Items","Score"][:len(show_cols)]
                         st.dataframe(anom_tbl, use_container_width=True, hide_index=True)
                     else:
-                        st.success("✅ No anomalous transactions detected for this user.")
+                        st.success("No anomalous transactions detected for this user.")
 
                 except Exception as ex:
-                    st.warning(f"⚠️ Anomaly detection could not run: {ex}")
+                    st.warning(f"Anomaly detection could not run: {ex}")
             else:
-                st.info("📊 Need at least 3 transactions to run anomaly detection.")
+                st.info("Need at least 3 transactions to run anomaly detection.")
 
 
     # ──────────────────────────────────────────────────────────
     # TAB 9 — REGION ANALYTICS
     # ──────────────────────────────────────────────────────────
     with tabs[8]:
-        st.markdown("## 🌍 Region Analytics")
+        st.markdown("## Region Analytics")
         filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
 
         # ──────────────────────────────────────────────────────────
@@ -1851,7 +1943,7 @@ def main():
         rdf = rdf[rdf["region"] != "Other"]
 
         if rdf.empty:
-            st.warning("⚠️ No data available after filters.")
+            st.warning("No data available after filters.")
         else:
             # ──── PRE-COMPUTE REGION AGGREGATIONS ────────────────
             rgby = rdf.groupby("region").agg(
@@ -1916,12 +2008,12 @@ def main():
 
             # ──── KPI CARDS ──────────────────────────────────
             k1,k2,k3,k4,k5,k6 = st.columns(6)
-            with k1: st.markdown(kpi_card("Total Regions",      f"{n_regions}",                    icon="🌍"), unsafe_allow_html=True)
-            with k2: st.markdown(kpi_card("Top Spending Region", top_region,                         icon="🏆"), unsafe_allow_html=True)
+            with k1: st.markdown(kpi_card("Total Regions",      f"{n_regions}",                    icon=""), unsafe_allow_html=True)
+            with k2: st.markdown(kpi_card("Top Spending Region", top_region,                         icon=""), unsafe_allow_html=True)
             with k3: st.markdown(kpi_card("Total Regional Spend",fmt(total_all_spend),               icon="💸"), unsafe_allow_html=True)
             with k4: st.markdown(kpi_card("Avg Spend/Region",   fmt(avg_spend_region),              icon="🧾"), unsafe_allow_html=True)
             with k5: st.markdown(kpi_card("Most Active Region",  most_active_region,                 icon="⚡"), unsafe_allow_html=True)
-            with k6: st.markdown(kpi_card("Fastest Growing",    f"{fastest_growing} ({fastest_pct:+.1f}%)", icon="📈"), unsafe_allow_html=True)
+            with k6: st.markdown(kpi_card("Fastest Growing",    f"{fastest_growing} ({fastest_pct:+.1f}%)", icon=""), unsafe_allow_html=True)
 
             st.markdown("---")
 
@@ -1929,7 +2021,7 @@ def main():
             col1, col2 = st.columns([3, 2])
 
             with col1:
-                st.markdown('<div class="section-title">📊 Region-Wise Total Spend</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Region-Wise Total Spend</div>', unsafe_allow_html=True)
                 fig = px.bar(rgby, x="region", y="total_spend",
                              color="region", color_discrete_sequence=PALETTE,
                              text="invoice_count",
@@ -1951,7 +2043,7 @@ def main():
             col3, col4 = st.columns(2)
 
             with col3:
-                st.markdown('<div class="section-title">🏷️ Category Distribution by Region</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Category Distribution by Region</div>', unsafe_allow_html=True)
                 _rcat = rdf.groupby(["region","category_display"])["total_amount"].sum().reset_index()
                 _rcat.columns = ["region","category","spend"]
                 # Sort regions by total spend so highest is at top
@@ -1973,7 +2065,7 @@ def main():
                 T(fig); st.plotly_chart(fig, use_container_width=True)
 
             with col4:
-                st.markdown('<div class="section-title">📈 Region Spend Trend (Monthly)</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Region Spend Trend (Monthly)</div>', unsafe_allow_html=True)
                 if "invoice_date" in rdf.columns:
                     _rt = rdf.dropna(subset=["invoice_date"]).copy()
 
@@ -2044,7 +2136,7 @@ def main():
                     T(fig); st.plotly_chart(fig, use_container_width=True)
 
             with col6:
-                st.markdown('<div class="section-title">🏪 Top Vendors by Region</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Top Vendors by Region</div>', unsafe_allow_html=True)
                 _rv = rdf.groupby(["region","merchant_name"])["total_amount"].sum().reset_index()
                 _rv.columns = ["region","vendor","spend"]
                 # Top 3 vendors per region, then take overall top 15 rows
@@ -2090,7 +2182,7 @@ def main():
 
             # ──── REGION SUMMARY TABLE ─────────────────────
             st.markdown("---")
-            st.markdown("### 📊 Region Summary Table")
+            st.markdown("### Region Summary Table")
 
             summary_rows = []
             for _, row in rgby.iterrows():
@@ -2111,7 +2203,7 @@ def main():
 
             # ──── REGION × CATEGORY MATRIX ───────────────────
             st.markdown("---")
-            st.markdown("### 🗳️ Region × Category Spend Matrix")
+            st.markdown("### Region × Category Spend Matrix")
 
             _matrix = rdf.groupby(["region","category_display"])["total_amount"].sum().unstack(fill_value=0)
             if not _matrix.empty:
@@ -2130,11 +2222,11 @@ def main():
                 # Show as styled dataframe
                 styled = _matrix.style.apply(_style_row, axis=1).format("{:,.0f}")
                 st.dataframe(styled, use_container_width=True)
-                st.caption("✅ Teal = Highest spend in that region  |  🔴 Red-tinted = Lowest spend in that region")
+                st.caption("Teal = Highest spend in that region  |  Red-tinted = Lowest spend in that region")
 
             # ──── AI INSIGHTS ─────────────────────────────
             st.markdown("---")
-            st.markdown("### 💡 AI-Generated Region Insights")
+            st.markdown("### AI-Generated Region Insights")
 
             r_insights = []
 
@@ -2142,7 +2234,7 @@ def main():
             if not rgby.empty:
                 top_pct = (rgby.iloc[0]["total_spend"] / total_all_spend * 100)
                 r_insights.append({
-                    "icon":"🏆","color":"#6c5ce7",
+                    "icon":"","color":"#6c5ce7",
                     "text":f"**{top_region}** is the highest-spending region, contributing "
                            f"**{top_pct:.1f}%** of total spend."
                 })
@@ -2160,7 +2252,7 @@ def main():
             tc = top_cat_per_region.get(top_region)
             if tc:
                 r_insights.append({
-                    "icon":"🏷️","color":"#a29bfe",
+                    "icon":"","color":"#a29bfe",
                     "text":f"**{tc}** is the most purchased category in the **{top_region}** region."
                 })
 
@@ -2175,7 +2267,7 @@ def main():
             # 5. Fastest growing
             if fastest_growing != "N/A":
                 r_insights.append({
-                    "icon":"📈" if fastest_pct > 0 else "📉",
+                    "icon":"" if fastest_pct > 0 else "",
                     "color":"#74b9ff",
                     "text":f"**{fastest_growing}** is the fastest-growing region with a "
                            f"month-on-month change of **{fastest_pct:+.1f}%**."
@@ -2185,7 +2277,7 @@ def main():
             tv = top_ven_per_region.get(top_region)
             if tv:
                 r_insights.append({
-                    "icon":"🏪","color":"#00cec9",
+                    "icon":"","color":"#00cec9",
                     "text":f"**{tv}** is the most preferred vendor in **{top_region}**."
                 })
 
