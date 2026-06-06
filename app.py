@@ -226,6 +226,7 @@ def T(fig):
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
+        title="",
         font=dict(family="Inter", color="#475569", size=12),
         title_font=dict(family="Inter", color="#0F172A", size=14),
         legend=dict(bgcolor="rgba(255,255,255,0.8)",
@@ -547,7 +548,7 @@ def main():
             st.metric("Date Range", f"{d0} → {d1}")
 
         st.markdown("---")
-        st.caption("🤖 Powered by Antigravity IDE · BOC Analytics v2.0")
+        st.caption("© 2026 BOC Analytics | Procurement Intelligence Platform")
 
     # ── GUARD — empty filter result ───────────────────────────
     if filtered_df.empty:
