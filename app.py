@@ -2308,7 +2308,7 @@ def main():
     # TAB 10 — CUSTOMER ANALYTICS
     # ──────────────────────────────────────────────────────────
     with tabs[9]:
-        st.markdown("## \U0001f465 Customer Usage Analytics")
+        st.markdown("## Customer Usage Analytics")
         filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
 
         # ── Detect customer identifier column ─────────────────
@@ -2386,19 +2386,19 @@ def main():
 
             # ── KPI CARDS ─────────────────────────────────────
             k1, k2, k3, k4, k5, k6 = st.columns(6)
-            with k1: st.markdown(kpi_card("Total Customers",    f"{total_custs:,}",      icon="\U0001f465"), unsafe_allow_html=True)
-            with k2: st.markdown(kpi_card("Active Customers",   f"{active_custs:,}",     icon="\U0001f7e2"), unsafe_allow_html=True)
-            with k3: st.markdown(kpi_card("Inactive Customers", f"{inactive_custs:,}",   icon="\U0001f534"), unsafe_allow_html=True)
-            with k4: st.markdown(kpi_card("Avg Customer Spend", fmt(avg_spend),          icon="\U0001f4b8"), unsafe_allow_html=True)
-            with k5: st.markdown(kpi_card("Avg Bills/Customer", f"{avg_bills:.1f}",      icon="\U0001f9fe"), unsafe_allow_html=True)
-            with k6: st.markdown(kpi_card("Avg CLV",            fmt(avg_clv),            icon="\U0001f31f"), unsafe_allow_html=True)
+            with k1: st.markdown(kpi_card("Total Customers",    f"{total_custs:,}"),      unsafe_allow_html=True)
+            with k2: st.markdown(kpi_card("Active Customers",   f"{active_custs:,}"),     unsafe_allow_html=True)
+            with k3: st.markdown(kpi_card("Inactive Customers", f"{inactive_custs:,}"),   unsafe_allow_html=True)
+            with k4: st.markdown(kpi_card("Avg Customer Spend", fmt(avg_spend)),          unsafe_allow_html=True)
+            with k5: st.markdown(kpi_card("Avg Bills/Customer", f"{avg_bills:.1f}"),      unsafe_allow_html=True)
+            with k6: st.markdown(kpi_card("Avg CLV",            fmt(avg_clv)),            unsafe_allow_html=True)
 
             st.markdown("---")
 
             # ════════════════════════════════════════════════
             # SECTION A — CUSTOMER SEGMENTATION (K-MEANS)
             # ════════════════════════════════════════════════
-            st.markdown('<div class="section-title">\U0001f9e9 Customer Segmentation (K-Means)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Customer Segmentation (K-Means)</div>', unsafe_allow_html=True)
 
             seg_df = grp_agg.copy()
             SEGMENT_NAMES = [
@@ -2454,18 +2454,10 @@ def main():
             # ── Segment KPIs ──────────────────────────────────
             seg_counts = seg_df["segment"].value_counts()
             seg_cols = st.columns(min(5, len(seg_counts)))
-            icons_seg = {
-                "High Value Customers":  "\U0001f451",
-                "Loyal Customers":       "\U0001f4aa",
-                "Frequent Buyers":       "\u26a1",
-                "Occasional Buyers":     "\U0001f4c5",
-                "At Risk Customers":     "\u26a0\ufe0f",
-            }
             for i, (seg_name, count) in enumerate(seg_counts.items()):
                 if i < len(seg_cols):
                     with seg_cols[i]:
-                        st.markdown(kpi_card(seg_name, str(count),
-                                             icon=icons_seg.get(seg_name, "")),
+                        st.markdown(kpi_card(seg_name, str(count)),
                                     unsafe_allow_html=True)
 
             st.markdown("")
@@ -2531,7 +2523,7 @@ def main():
             # ════════════════════════════════════════════════
             # SECTION B — RFM ANALYSIS
             # ════════════════════════════════════════════════
-            st.markdown('<div class="section-title">\U0001f3af RFM Analysis</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">RFM Analysis</div>', unsafe_allow_html=True)
 
             rfm = grp_agg[[cust_col, "cust_label", "recency_days", "invoice_count", "total_spend"]].copy()
             rfm.columns = [cust_col, "cust_label", "Recency", "Frequency", "Monetary"]
@@ -2581,13 +2573,10 @@ def main():
             # ── RFM Segment KPIs ──────────────────────────────
             rfm_seg_counts = rfm["RFM_Segment"].value_counts()
             rfm_kpi_cols = st.columns(min(6, len(rfm_seg_counts)))
-            rfm_icons = {"Champions": "\U0001f3c6", "Loyal Customers": "\U0001f4aa",
-                         "Potential Loyalists": "\U0001f4c8", "New Customers": "\U0001f195",
-                         "At Risk": "\u26a0\ufe0f", "Lost Customers": "\U0001f6ab"}
             for i, (seg_, cnt_) in enumerate(rfm_seg_counts.items()):
                 if i < len(rfm_kpi_cols):
                     with rfm_kpi_cols[i]:
-                        st.markdown(kpi_card(seg_, str(cnt_), icon=rfm_icons.get(seg_, "")),
+                        st.markdown(kpi_card(seg_, str(cnt_)),
                                     unsafe_allow_html=True)
 
             st.markdown("")
@@ -2640,7 +2629,7 @@ def main():
             # ════════════════════════════════════════════════
             # SECTION C — CUSTOMER LIFETIME VALUE
             # ════════════════════════════════════════════════
-            st.markdown('<div class="section-title">\U0001f31f Customer Lifetime Value (CLV)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Customer Lifetime Value (CLV)</div>', unsafe_allow_html=True)
 
             clv_df = grp_agg[["cust_label", "total_spend", "invoice_count",
                                 "avg_bill", "purchase_freq", "lifespan_days", "clv"]].copy()
@@ -2686,7 +2675,7 @@ def main():
             # ════════════════════════════════════════════════
             # SECTION D — CUSTOMER SPENDING ANALYTICS
             # ════════════════════════════════════════════════
-            st.markdown('<div class="section-title">\U0001f4ca Customer Spending Analytics</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Customer Spending Analytics</div>', unsafe_allow_html=True)
 
             col_sp1, col_sp2 = st.columns(2)
 
@@ -2781,7 +2770,7 @@ def main():
             # ════════════════════════════════════════════════
             # SECTION E — CATEGORY PREFERENCE ANALYSIS
             # ════════════════════════════════════════════════
-            st.markdown('<div class="section-title">\U0001f4cb Category Preference Analysis</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Category Preference Analysis</div>', unsafe_allow_html=True)
 
             # Favorite category per customer
             cust_cat = cdf.groupby([cust_col, "_cust_label", "category_display"])["total_amount"].sum().reset_index()
@@ -2861,7 +2850,7 @@ def main():
                 rdf_cust = cdf[cdf["_region"] != "Other"]
 
                 if not rdf_cust.empty:
-                    st.markdown('<div class="section-title">\U0001f310 Region-wise Customer Analytics</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="section-title">Region-wise Customer Analytics</div>', unsafe_allow_html=True)
 
                     reg_cust = rdf_cust.groupby("_region").agg(
                         customers=(cust_col, "nunique"),
@@ -2943,7 +2932,7 @@ def main():
             # ════════════════════════════════════════════════
             # SECTION G — UPSELL OPPORTUNITIES
             # ════════════════════════════════════════════════
-            st.markdown('<div class="section-title">\U0001f4a1 Upsell Opportunities</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Upsell Opportunities</div>', unsafe_allow_html=True)
 
             upsell_recs = []
 
@@ -2951,7 +2940,6 @@ def main():
             high_clv = grp_agg.nlargest(10, "clv")
             for _, row in high_clv.iterrows():
                 upsell_recs.append({
-                    "icon": "\U0001f31f",
                     "color": "#F59E0B",
                     "customer": row["cust_label"],
                     "reason": f"High CLV customer ({fmt(row['clv'])}). "
@@ -2959,11 +2947,12 @@ def main():
                 })
 
             # 2. Customers with increasing spend (last 2 months MoM growth)
+            # FIX: group only by cust_col + month_sort so index is a plain scalar, not a tuple
             if "invoice_date" in cdf.columns:
                 _spend_trend = cdf.dropna(subset=["invoice_date"]).copy()
                 _spend_trend["month_sort"] = _spend_trend["invoice_date"].dt.to_period("M").astype(str)
                 _cust_monthly = (
-                    _spend_trend.groupby([cust_col, "_cust_label", "month_sort"])["total_amount"]
+                    _spend_trend.groupby([cust_col, "month_sort"])["total_amount"]
                     .sum().unstack(fill_value=0)
                 )
                 if _cust_monthly.shape[1] >= 2:
@@ -2972,11 +2961,10 @@ def main():
                     growth_ = ((last_m - prev_m) / prev_m * 100).dropna()
                     top_growers = growth_[growth_ > 20].nlargest(5)
                     for cid_, gpct_ in top_growers.items():
-                        # Retrieve label safely
-                        lbl_rows = grp_agg[grp_agg[cust_col] == cid_]["cust_label"]
+                        # cid_ is now a plain scalar (user_id), safe for == comparison
+                        lbl_rows = grp_agg[grp_agg[cust_col].astype(str) == str(cid_)]["cust_label"]
                         lbl_ = lbl_rows.values[0] if len(lbl_rows) > 0 else str(cid_)[:20]
                         upsell_recs.append({
-                            "icon": "\U0001f4c8",
                             "color": "#10B981",
                             "customer": lbl_,
                             "reason": f"Spend increased {gpct_:+.1f}% last month. "
@@ -2991,9 +2979,8 @@ def main():
             custs_multi_cat.columns = [cust_col, "cust_label", "cat_count"]
             multi_buyers = custs_multi_cat[custs_multi_cat["cat_count"] >= 3].head(5)
             for _, row in multi_buyers.iterrows():
-                # Find their least-used category vs all categories
                 cust_cats = (
-                    cdf[cdf[cust_col] == row[cust_col]]
+                    cdf[cdf[cust_col].astype(str) == str(row[cust_col])]
                     .groupby("category_display")["total_amount"].sum()
                     .sort_values()
                 )
@@ -3001,11 +2988,10 @@ def main():
                 missing   = list(all_cats - set(cust_cats.index))
                 rec_cat   = missing[0] if missing else (cust_cats.index[0] if len(cust_cats) else "new categories")
                 upsell_recs.append({
-                    "icon": "\U0001f6d2",
                     "color": "#8B5CF6",
                     "customer": row["cust_label"],
                     "reason": f"Buys {row['cat_count']} categories. "
-                               f"Recommend expanding into **{rec_cat}**.",
+                               f"Recommend expanding into {rec_cat}.",
                 })
 
             # Render upsell cards (max 15)
@@ -3015,13 +3001,9 @@ def main():
                     st.markdown(f"""
                     <div style="background:rgba({r_},{g_},{b_},0.10);
                                 border-left:4px solid {rec['color']};border-radius:10px;
-                                padding:0.9rem 1.2rem;margin-bottom:0.6rem;
-                                display:flex;align-items:flex-start;gap:0.8rem;">
-                      <span style="font-size:1.3rem;">{rec['icon']}</span>
-                      <div>
-                        <div style="font-weight:700;color:#0F172A;font-size:0.9rem;">{rec['customer']}</div>
-                        <div style="color:#475569;font-size:0.85rem;margin-top:2px;">{rec['reason']}</div>
-                      </div>
+                                padding:0.9rem 1.2rem;margin-bottom:0.6rem;">
+                      <div style="font-weight:700;color:#0F172A;font-size:0.9rem;">{rec['customer']}</div>
+                      <div style="color:#475569;font-size:0.85rem;margin-top:2px;">{rec['reason']}</div>
                     </div>""", unsafe_allow_html=True)
             else:
                 st.info("Not enough data to generate upsell recommendations.")
@@ -3031,7 +3013,7 @@ def main():
             # ════════════════════════════════════════════════
             # SECTION H — AI INSIGHTS
             # ════════════════════════════════════════════════
-            st.markdown('<div class="section-title">\U0001f9e0 AI-Generated Customer Insights</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">AI-Generated Customer Insights</div>', unsafe_allow_html=True)
 
             ai_insights = []
 
@@ -3043,7 +3025,6 @@ def main():
                     / grp_agg["total_spend"].sum() * 100
                 )
                 ai_insights.append({
-                    "icon": "\U0001f4ca",
                     "color": "#6c5ce7",
                     "text": f"Top **{n20}** customers ({20}% of base) contribute "
                              f"**{top20_spend_pct:.1f}%** of total spend — classic Pareto pattern.",
@@ -3057,7 +3038,6 @@ def main():
                     / cdf["total_amount"].sum() * 100
                 )
                 ai_insights.append({
-                    "icon": "\U0001f3c6",
                     "color": "#10B981",
                     "text": f"**{top_cat_overall}** is the most preferred category, "
                              f"accounting for **{top_cat_pct:.1f}%** of customer spend.",
@@ -3067,7 +3047,6 @@ def main():
             champions_count = int((rfm["RFM_Segment"] == "Champions").sum())
             if champions_count > 0:
                 ai_insights.append({
-                    "icon": "\U0001f451",
                     "color": "#F59E0B",
                     "text": f"**{champions_count}** customers are classified as **Champions** "
                              f"(high R + F + M scores) — your most valuable cohort.",
@@ -3077,7 +3056,6 @@ def main():
             at_risk_count = int((rfm["RFM_Segment"] == "At Risk").sum())
             if at_risk_count > 0:
                 ai_insights.append({
-                    "icon": "\u26a0\ufe0f",
                     "color": "#EF4444",
                     "text": f"**{at_risk_count}** customers are classified as **At Risk** — "
                              f"they used to buy frequently but haven't purchased recently. "
@@ -3089,7 +3067,6 @@ def main():
                 top1 = grp_agg.nlargest(1, "total_spend").iloc[0]
                 top1_pct = top1["total_spend"] / grp_agg["total_spend"].sum() * 100
                 ai_insights.append({
-                    "icon": "\U0001f31f",
                     "color": "#3B82F6",
                     "text": f"Top customer **{top1['cust_label']}** contributes "
                              f"**{fmt(top1['total_spend'])}** ({top1_pct:.1f}% of total spend).",
@@ -3098,7 +3075,6 @@ def main():
             # 6. Active vs inactive ratio
             active_pct = active_custs / total_custs * 100 if total_custs else 0
             ai_insights.append({
-                "icon": "\U0001f7e2",
                 "color": "#10B981",
                 "text": f"**{active_pct:.1f}%** of customers are active (purchased in the last "
                          f"{ACTIVE_DAYS} days). **{100-active_pct:.1f}%** may need re-engagement.",
@@ -3106,7 +3082,6 @@ def main():
 
             # 7. Avg CLV
             ai_insights.append({
-                "icon": "\U0001f4b0",
                 "color": "#8B5CF6",
                 "text": f"Average Customer Lifetime Value is **{fmt(avg_clv)}**. "
                          f"High-Value segment CLV is "
@@ -3123,7 +3098,6 @@ def main():
                 <div style="background:rgba({r_},{g_},{b_},0.10);
                             border-left:4px solid {ins['color']};border-radius:10px;
                             padding:0.9rem 1.2rem;margin-bottom:0.7rem;">
-                  <span style="font-size:1.1rem;margin-right:8px;">{ins['icon']}</span>
                   <span style="color:#334155;font-size:0.88rem;">{ins['text']}</span>
                 </div>"""
                 if i < _half:
