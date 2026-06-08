@@ -2488,16 +2488,24 @@ def main():
 
             with col_seg2:
                 st.markdown('<div class="section-title">Segment Spend vs Invoice Count</div>', unsafe_allow_html=True)
-                seg_scatter_sample = seg_df.sample(min(500, len(seg_df)), random_state=42)
+                _ssc = seg_df.copy()
+                # Guard: log scale and size bubble require strictly positive values
+                _ssc = _ssc[(_ssc["total_spend"] > 0) & (_ssc["avg_bill"] > 0)]
+                if _ssc.empty:
+                    _ssc = seg_df.copy()  # fallback: show all without size
+                    _use_size = False
+                else:
+                    _use_size = True
+                _ssc = _ssc.sample(min(500, len(_ssc)), random_state=42)
                 fig_seg_sc = px.scatter(
-                    seg_scatter_sample,
+                    _ssc,
                     x="total_spend", y="invoice_count",
                     color="segment",
                     color_discrete_map=SEG_COLORS,
-                    size="avg_bill",
+                    size="avg_bill" if _use_size else None,
+                    size_max=30,
                     hover_data=["cust_label", "avg_bill", "recency_days"],
                     labels={"total_spend": "Total Spend", "invoice_count": "Invoice Count"},
-                    log_x=True,
                 )
                 fig_seg_sc.update_layout(height=340)
                 T(fig_seg_sc); st.plotly_chart(fig_seg_sc, use_container_width=True)
