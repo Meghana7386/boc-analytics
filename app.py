@@ -572,6 +572,7 @@ def main():
         "Anomaly Detection",
         "User Analytics",
         "Region Analytics",
+        "\U0001f465 Customer Analytics",
     ])
 
     # ──────────────────────────────────────────────────────────
@@ -2301,6 +2302,826 @@ def main():
                   <span style="font-size:1.1rem;margin-right:8px;">{ins['icon']}</span>
                   <span style="color:#e0e0e0;font-size:0.9rem;">{ins['text']}</span>
                 </div>""", unsafe_allow_html=True)
+
+
+    # ──────────────────────────────────────────────────────────
+    # TAB 10 — CUSTOMER ANALYTICS
+    # ──────────────────────────────────────────────────────────
+    with tabs[9]:
+        st.markdown("## \U0001f465 Customer Usage Analytics")
+        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
+
+        # ── Detect customer identifier column ─────────────────
+        cdf = filtered_df.copy()
+        if "user_id" in cdf.columns and cdf["user_id"].notna().any():
+            cust_col = "user_id"
+            label_col = "user_name" if "user_name" in cdf.columns else None
+            email_col = "user_email" if "user_email" in cdf.columns else None
+        elif "user_email" in cdf.columns and cdf["user_email"].notna().any():
+            cust_col = "user_email"
+            label_col = "user_name" if "user_name" in cdf.columns else None
+            email_col = "user_email"
+        else:
+            cust_col = None
+
+        if cust_col is None:
+            st.warning("Customer identification columns (user_id / user_email) not found in the current dataset. "
+                       "Please ensure the dataset includes user information.")
+        else:
+            # ── Build per-customer base table ─────────────────
+            cdf = cdf.dropna(subset=[cust_col])
+
+            # Customer display name for charts
+            def _cust_label(row):
+                parts = []
+                if label_col and pd.notna(row.get(label_col, None)):
+                    parts.append(str(row[label_col]))
+                if email_col and email_col != cust_col and pd.notna(row.get(email_col, None)):
+                    parts.append(f"({str(row[email_col])})")
+                if parts:
+                    return " ".join(parts)
+                return str(row[cust_col])[:20]
+
+            cdf["_cust_label"] = cdf.apply(_cust_label, axis=1)
+
+            # ── Aggregate per customer ────────────────────────
+            now = cdf["invoice_date"].dropna().max()
+            if pd.isna(now):
+                now = pd.Timestamp.now()
+
+            grp_agg = cdf.groupby(cust_col).agg(
+                total_spend=("total_amount", "sum"),
+                invoice_count=("bill_id", "count"),
+                avg_bill=("total_amount", "mean"),
+                last_purchase=("invoice_date", "max"),
+                first_purchase=("invoice_date", "min"),
+                cust_label=("_cust_label", "first"),
+            ).reset_index()
+
+            grp_agg["recency_days"] = (now - grp_agg["last_purchase"]).dt.days.fillna(9999)
+            grp_agg["lifespan_days"] = (
+                (grp_agg["last_purchase"] - grp_agg["first_purchase"]).dt.days.fillna(0) + 1
+            )
+            grp_agg["purchase_freq"] = grp_agg["invoice_count"] / (
+                grp_agg["lifespan_days"] / 30.0
+            ).clip(lower=1)  # purchases per month
+
+            # ── Define Active / Inactive (90-day window) ──────
+            ACTIVE_DAYS = 90
+            grp_agg["is_active"] = grp_agg["recency_days"] <= ACTIVE_DAYS
+
+            total_custs   = len(grp_agg)
+            active_custs  = int(grp_agg["is_active"].sum())
+            inactive_custs = total_custs - active_custs
+            avg_spend     = grp_agg["total_spend"].mean()
+            avg_bills     = grp_agg["invoice_count"].mean()
+
+            # CLV = avg_purchase_value × purchase_freq × lifespan_months
+            grp_agg["clv"] = (
+                grp_agg["avg_bill"]
+                * grp_agg["purchase_freq"]
+                * (grp_agg["lifespan_days"] / 30.0).clip(lower=1)
+            )
+            avg_clv = grp_agg["clv"].mean()
+
+            # ── KPI CARDS ─────────────────────────────────────
+            k1, k2, k3, k4, k5, k6 = st.columns(6)
+            with k1: st.markdown(kpi_card("Total Customers",    f"{total_custs:,}",      icon="\U0001f465"), unsafe_allow_html=True)
+            with k2: st.markdown(kpi_card("Active Customers",   f"{active_custs:,}",     icon="\U0001f7e2"), unsafe_allow_html=True)
+            with k3: st.markdown(kpi_card("Inactive Customers", f"{inactive_custs:,}",   icon="\U0001f534"), unsafe_allow_html=True)
+            with k4: st.markdown(kpi_card("Avg Customer Spend", fmt(avg_spend),          icon="\U0001f4b8"), unsafe_allow_html=True)
+            with k5: st.markdown(kpi_card("Avg Bills/Customer", f"{avg_bills:.1f}",      icon="\U0001f9fe"), unsafe_allow_html=True)
+            with k6: st.markdown(kpi_card("Avg CLV",            fmt(avg_clv),            icon="\U0001f31f"), unsafe_allow_html=True)
+
+            st.markdown("---")
+
+            # ════════════════════════════════════════════════
+            # SECTION A — CUSTOMER SEGMENTATION (K-MEANS)
+            # ════════════════════════════════════════════════
+            st.markdown('<div class="section-title">\U0001f9e9 Customer Segmentation (K-Means)</div>', unsafe_allow_html=True)
+
+            seg_df = grp_agg.copy()
+            SEGMENT_NAMES = [
+                "High Value Customers",
+                "Loyal Customers",
+                "Frequent Buyers",
+                "Occasional Buyers",
+                "At Risk Customers",
+            ]
+            SEG_COLORS = {
+                "High Value Customers":  "#F59E0B",
+                "Loyal Customers":       "#10B981",
+                "Frequent Buyers":       "#3B82F6",
+                "Occasional Buyers":     "#8B5CF6",
+                "At Risk Customers":     "#EF4444",
+            }
+
+            try:
+                from sklearn.preprocessing import StandardScaler
+                from sklearn.cluster import KMeans
+
+                feat_cols = ["total_spend", "invoice_count", "avg_bill", "purchase_freq"]
+                X_seg = seg_df[feat_cols].fillna(0)
+                scaler = StandardScaler()
+                X_scaled = scaler.fit_transform(X_seg)
+                n_clusters = min(5, len(seg_df))
+                km = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+                seg_df["cluster_raw"] = km.fit_predict(X_scaled)
+
+                # Label clusters by avg total_spend descending
+                cluster_spend = seg_df.groupby("cluster_raw")["total_spend"].mean().sort_values(ascending=False)
+                cluster_label_map = {cid: SEGMENT_NAMES[i] for i, cid in enumerate(cluster_spend.index)}
+                seg_df["segment"] = seg_df["cluster_raw"].map(cluster_label_map)
+            except Exception:
+                # Fallback: rule-based segmentation
+                spend_75 = grp_agg["total_spend"].quantile(0.75)
+                spend_50 = grp_agg["total_spend"].quantile(0.50)
+                freq_75  = grp_agg["invoice_count"].quantile(0.75)
+
+                def _rule_seg(row):
+                    if row["total_spend"] >= spend_75:
+                        return "High Value Customers"
+                    elif row["invoice_count"] >= freq_75:
+                        return "Loyal Customers"
+                    elif row["purchase_freq"] >= 2:
+                        return "Frequent Buyers"
+                    elif row["recency_days"] > 180:
+                        return "At Risk Customers"
+                    else:
+                        return "Occasional Buyers"
+                seg_df["segment"] = seg_df.apply(_rule_seg, axis=1)
+
+            # ── Segment KPIs ──────────────────────────────────
+            seg_counts = seg_df["segment"].value_counts()
+            seg_cols = st.columns(min(5, len(seg_counts)))
+            icons_seg = {
+                "High Value Customers":  "\U0001f451",
+                "Loyal Customers":       "\U0001f4aa",
+                "Frequent Buyers":       "\u26a1",
+                "Occasional Buyers":     "\U0001f4c5",
+                "At Risk Customers":     "\u26a0\ufe0f",
+            }
+            for i, (seg_name, count) in enumerate(seg_counts.items()):
+                if i < len(seg_cols):
+                    with seg_cols[i]:
+                        st.markdown(kpi_card(seg_name, str(count),
+                                             icon=icons_seg.get(seg_name, "")),
+                                    unsafe_allow_html=True)
+
+            st.markdown("")
+
+            col_seg1, col_seg2 = st.columns([1, 1])
+
+            with col_seg1:
+                st.markdown('<div class="section-title">Cluster Distribution</div>', unsafe_allow_html=True)
+                seg_cnt_df = seg_df["segment"].value_counts().reset_index()
+                seg_cnt_df.columns = ["Segment", "Count"]
+                fig_seg_pie = px.pie(
+                    seg_cnt_df, values="Count", names="Segment", hole=0.55,
+                    color="Segment",
+                    color_discrete_map=SEG_COLORS,
+                )
+                fig_seg_pie.update_traces(textposition="outside", textinfo="label+percent",
+                                          textfont_size=11, pull=[0.03] * len(seg_cnt_df))
+                fig_seg_pie.update_layout(height=340, showlegend=False)
+                T(fig_seg_pie); st.plotly_chart(fig_seg_pie, use_container_width=True)
+
+            with col_seg2:
+                st.markdown('<div class="section-title">Segment Spend vs Invoice Count</div>', unsafe_allow_html=True)
+                seg_scatter_sample = seg_df.sample(min(500, len(seg_df)), random_state=42)
+                fig_seg_sc = px.scatter(
+                    seg_scatter_sample,
+                    x="total_spend", y="invoice_count",
+                    color="segment",
+                    color_discrete_map=SEG_COLORS,
+                    size="avg_bill",
+                    hover_data=["cust_label", "avg_bill", "recency_days"],
+                    labels={"total_spend": "Total Spend", "invoice_count": "Invoice Count"},
+                    log_x=True,
+                )
+                fig_seg_sc.update_layout(height=340)
+                T(fig_seg_sc); st.plotly_chart(fig_seg_sc, use_container_width=True)
+
+            # ── Segment Table ──────────────────────────────────
+            st.markdown('<div class="section-title">Segment-wise Summary</div>', unsafe_allow_html=True)
+            seg_summary = seg_df.groupby("segment").agg(
+                Customers=("cust_label", "count"),
+                Total_Spend=("total_spend", "sum"),
+                Avg_Spend=("total_spend", "mean"),
+                Avg_Bills=("invoice_count", "mean"),
+                Avg_CLV=("clv", "mean"),
+            ).reset_index().sort_values("Total_Spend", ascending=False)
+            seg_summary["Total_Spend"] = seg_summary["Total_Spend"].apply(fmt)
+            seg_summary["Avg_Spend"]   = seg_summary["Avg_Spend"].apply(fmt)
+            seg_summary["Avg_Bills"]   = seg_summary["Avg_Bills"].apply(lambda x: f"{x:.1f}")
+            seg_summary["Avg_CLV"]     = seg_summary["Avg_CLV"].apply(fmt)
+            seg_summary.columns = ["Segment", "Customers", "Total Spend", "Avg Spend", "Avg Bills", "Avg CLV"]
+            st.dataframe(seg_summary, use_container_width=True, hide_index=True)
+
+            st.markdown("---")
+
+            # ════════════════════════════════════════════════
+            # SECTION B — RFM ANALYSIS
+            # ════════════════════════════════════════════════
+            st.markdown('<div class="section-title">\U0001f3af RFM Analysis</div>', unsafe_allow_html=True)
+
+            rfm = grp_agg[[cust_col, "cust_label", "recency_days", "invoice_count", "total_spend"]].copy()
+            rfm.columns = [cust_col, "cust_label", "Recency", "Frequency", "Monetary"]
+
+            # Score 1–5 (quintiles); Recency: lower = better
+            def _qcut_safe(series, labels):
+                try:
+                    return pd.qcut(series, q=5, labels=labels, duplicates="drop")
+                except Exception:
+                    return pd.cut(series, bins=5, labels=labels[::-1])
+
+            rfm["R_Score"] = _qcut_safe(rfm["Recency"],   [5, 4, 3, 2, 1])
+            rfm["F_Score"] = _qcut_safe(rfm["Frequency"], [1, 2, 3, 4, 5])
+            rfm["M_Score"] = _qcut_safe(rfm["Monetary"],  [1, 2, 3, 4, 5])
+
+            for col_ in ["R_Score", "F_Score", "M_Score"]:
+                rfm[col_] = pd.to_numeric(rfm[col_], errors="coerce").fillna(3).astype(int)
+
+            rfm["RFM_Score"] = rfm["R_Score"] + rfm["F_Score"] + rfm["M_Score"]
+
+            def _rfm_segment(row):
+                r, f, m = row["R_Score"], row["F_Score"], row["M_Score"]
+                if r >= 4 and f >= 4 and m >= 4:
+                    return "Champions"
+                elif f >= 4 and m >= 4:
+                    return "Loyal Customers"
+                elif r >= 3 and f >= 3:
+                    return "Potential Loyalists"
+                elif r >= 4 and f <= 2:
+                    return "New Customers"
+                elif r <= 2 and f >= 3:
+                    return "At Risk"
+                else:
+                    return "Lost Customers"
+
+            rfm["RFM_Segment"] = rfm.apply(_rfm_segment, axis=1)
+
+            RFM_SEG_COLORS = {
+                "Champions":           "#10B981",
+                "Loyal Customers":     "#3B82F6",
+                "Potential Loyalists": "#8B5CF6",
+                "New Customers":       "#F59E0B",
+                "At Risk":             "#EF4444",
+                "Lost Customers":      "#64748B",
+            }
+
+            # ── RFM Segment KPIs ──────────────────────────────
+            rfm_seg_counts = rfm["RFM_Segment"].value_counts()
+            rfm_kpi_cols = st.columns(min(6, len(rfm_seg_counts)))
+            rfm_icons = {"Champions": "\U0001f3c6", "Loyal Customers": "\U0001f4aa",
+                         "Potential Loyalists": "\U0001f4c8", "New Customers": "\U0001f195",
+                         "At Risk": "\u26a0\ufe0f", "Lost Customers": "\U0001f6ab"}
+            for i, (seg_, cnt_) in enumerate(rfm_seg_counts.items()):
+                if i < len(rfm_kpi_cols):
+                    with rfm_kpi_cols[i]:
+                        st.markdown(kpi_card(seg_, str(cnt_), icon=rfm_icons.get(seg_, "")),
+                                    unsafe_allow_html=True)
+
+            st.markdown("")
+            col_rfm1, col_rfm2 = st.columns(2)
+
+            with col_rfm1:
+                st.markdown('<div class="section-title">RFM Segment Distribution</div>', unsafe_allow_html=True)
+                rfm_cnt = rfm_seg_counts.reset_index()
+                rfm_cnt.columns = ["Segment", "Count"]
+                fig_rfm_bar = px.bar(
+                    rfm_cnt, x="Segment", y="Count",
+                    color="Segment", color_discrete_map=RFM_SEG_COLORS,
+                    text="Count",
+                )
+                fig_rfm_bar.update_traces(textposition="outside")
+                fig_rfm_bar.update_layout(height=340, showlegend=False, xaxis_tickangle=-20)
+                T(fig_rfm_bar); st.plotly_chart(fig_rfm_bar, use_container_width=True)
+
+            with col_rfm2:
+                st.markdown('<div class="section-title">RFM Score Heatmap (R vs F coloured by M)</div>', unsafe_allow_html=True)
+                rfm_heat = rfm.groupby(["R_Score", "F_Score"])["Monetary"].mean().reset_index()
+                rfm_pivot = rfm_heat.pivot(index="R_Score", columns="F_Score", values="Monetary").fillna(0)
+                fig_rfm_hm = go.Figure(go.Heatmap(
+                    z=rfm_pivot.values,
+                    x=[f"F={c}" for c in rfm_pivot.columns],
+                    y=[f"R={r}" for r in rfm_pivot.index],
+                    colorscale=[[0, "#1a1a2e"], [0.5, "#6c5ce7"], [1, "#00cec9"]],
+                    text=rfm_pivot.values.round(0),
+                    texttemplate="%{text:,.0f}",
+                    textfont={"size": 10},
+                    colorbar=dict(title="Avg Monetary"),
+                ))
+                fig_rfm_hm.update_layout(height=340, xaxis_title="Frequency Score",
+                                          yaxis_title="Recency Score")
+                T(fig_rfm_hm); st.plotly_chart(fig_rfm_hm, use_container_width=True)
+
+            # ── RFM Table ──────────────────────────────────────
+            st.markdown('<div class="section-title">RFM Segmentation Table (Top 30)</div>', unsafe_allow_html=True)
+            rfm_disp = rfm.sort_values("RFM_Score", ascending=False).head(30).copy()
+            rfm_disp["Recency"]   = rfm_disp["Recency"].apply(lambda x: f"{x:.0f} days")
+            rfm_disp["Monetary"]  = rfm_disp["Monetary"].apply(fmt)
+            rfm_disp = rfm_disp[["cust_label", "Recency", "Frequency", "Monetary",
+                                   "R_Score", "F_Score", "M_Score", "RFM_Score", "RFM_Segment"]]
+            rfm_disp.columns = ["Customer", "Recency", "Freq", "Monetary",
+                                  "R", "F", "M", "RFM Total", "Segment"]
+            st.dataframe(rfm_disp, use_container_width=True, hide_index=True)
+
+            st.markdown("---")
+
+            # ════════════════════════════════════════════════
+            # SECTION C — CUSTOMER LIFETIME VALUE
+            # ════════════════════════════════════════════════
+            st.markdown('<div class="section-title">\U0001f31f Customer Lifetime Value (CLV)</div>', unsafe_allow_html=True)
+
+            clv_df = grp_agg[["cust_label", "total_spend", "invoice_count",
+                                "avg_bill", "purchase_freq", "lifespan_days", "clv"]].copy()
+            clv_df = clv_df.sort_values("clv", ascending=False)
+
+            col_clv1, col_clv2 = st.columns(2)
+
+            with col_clv1:
+                st.markdown('<div class="section-title">Top 20 Customers by CLV</div>', unsafe_allow_html=True)
+                top20_clv = clv_df.head(20).copy()
+                fig_clv = px.bar(
+                    top20_clv, x="clv", y="cust_label", orientation="h",
+                    color="clv", color_continuous_scale=["#6c5ce7", "#F59E0B"],
+                    labels={"clv": "CLV", "cust_label": "Customer"},
+                )
+                fig_clv.update_layout(height=420, yaxis=dict(title="", autorange="reversed"),
+                                       showlegend=False, coloraxis_showscale=False)
+                T(fig_clv); st.plotly_chart(fig_clv, use_container_width=True)
+
+            with col_clv2:
+                st.markdown('<div class="section-title">CLV Distribution</div>', unsafe_allow_html=True)
+                fig_clv_hist = px.histogram(
+                    clv_df, x="clv", nbins=30,
+                    color_discrete_sequence=["#6c5ce7"],
+                    labels={"clv": "Customer Lifetime Value"},
+                )
+                fig_clv_hist.update_layout(height=420)
+                T(fig_clv_hist); st.plotly_chart(fig_clv_hist, use_container_width=True)
+
+            # ── CLV Leaderboard ────────────────────────────────
+            st.markdown('<div class="section-title">CLV Leaderboard</div>', unsafe_allow_html=True)
+            clv_leader = clv_df.head(20).copy()
+            clv_leader["clv"]        = clv_leader["clv"].apply(fmt)
+            clv_leader["total_spend"]= clv_leader["total_spend"].apply(fmt)
+            clv_leader["avg_bill"]   = clv_leader["avg_bill"].apply(fmt)
+            clv_leader["lifespan_days"] = clv_leader["lifespan_days"].apply(lambda x: f"{int(x)} days")
+            clv_leader.columns = ["Customer", "Total Spend", "Invoices",
+                                   "Avg Bill", "Freq/Month", "Lifespan", "CLV"]
+            st.dataframe(clv_leader, use_container_width=True, hide_index=True)
+
+            st.markdown("---")
+
+            # ════════════════════════════════════════════════
+            # SECTION D — CUSTOMER SPENDING ANALYTICS
+            # ════════════════════════════════════════════════
+            st.markdown('<div class="section-title">\U0001f4ca Customer Spending Analytics</div>', unsafe_allow_html=True)
+
+            col_sp1, col_sp2 = st.columns(2)
+
+            with col_sp1:
+                st.markdown('<div class="section-title">Customer Spend Distribution</div>', unsafe_allow_html=True)
+                fig_sp_dist = px.histogram(
+                    grp_agg, x="total_spend", nbins=40,
+                    color_discrete_sequence=["#10B981"],
+                    labels={"total_spend": "Total Spend", "count": "# Customers"},
+                )
+                fig_sp_dist.update_layout(height=320)
+                T(fig_sp_dist); st.plotly_chart(fig_sp_dist, use_container_width=True)
+
+            with col_sp2:
+                st.markdown('<div class="section-title">Top 15 Customers by Spend</div>', unsafe_allow_html=True)
+                top15_spend = grp_agg.sort_values("total_spend", ascending=False).head(15)
+                fig_top15 = px.bar(
+                    top15_spend, x="total_spend", y="cust_label", orientation="h",
+                    color="total_spend", color_continuous_scale=["#3B82F6", "#10B981"],
+                    text="invoice_count",
+                    labels={"total_spend": "Total Spend", "cust_label": "Customer"},
+                )
+                fig_top15.update_traces(texttemplate="%{text} invoices", textposition="inside")
+                fig_top15.update_layout(height=320, yaxis=dict(title="", autorange="reversed"),
+                                         showlegend=False, coloraxis_showscale=False)
+                T(fig_top15); st.plotly_chart(fig_top15, use_container_width=True)
+
+            # ── Monthly Customer Spend Trend ───────────────────
+            if "invoice_date" in cdf.columns:
+                col_sp3, col_sp4 = st.columns(2)
+
+                with col_sp3:
+                    st.markdown('<div class="section-title">Monthly Customer Spend Trend</div>', unsafe_allow_html=True)
+                    _mcs = cdf.dropna(subset=["invoice_date", "total_amount"]).copy()
+                    _mcs["month"]      = _mcs["invoice_date"].dt.strftime("%b %Y")
+                    _mcs["month_sort"] = _mcs["invoice_date"].dt.to_period("M").astype(str)
+                    _mcsg = _mcs.groupby(["month", "month_sort"]).agg(
+                        total_spend=("total_amount", "sum"),
+                        unique_customers=(cust_col, "nunique"),
+                    ).reset_index().sort_values("month_sort")
+                    if not _mcsg.empty:
+                        fig_mcs = go.Figure()
+                        fig_mcs.add_trace(go.Scatter(
+                            x=_mcsg["month"], y=_mcsg["total_spend"], name="Total Spend",
+                            mode="lines+markers", fill="tozeroy",
+                            line=dict(color="#10B981", width=3),
+                            fillcolor="rgba(16,185,129,0.15)",
+                        ))
+                        fig_mcs.add_trace(go.Scatter(
+                            x=_mcsg["month"], y=_mcsg["unique_customers"], name="Active Customers",
+                            mode="lines+markers", yaxis="y2",
+                            line=dict(color="#F59E0B", width=2, dash="dot"),
+                        ))
+                        fig_mcs.update_layout(
+                            xaxis=dict(type="category", title="", tickangle=-30),
+                            yaxis=dict(title="Total Spend"),
+                            yaxis2=dict(overlaying="y", side="right", showgrid=False, title="Active Customers"),
+                            height=320, showlegend=True,
+                        )
+                        T(fig_mcs); st.plotly_chart(fig_mcs, use_container_width=True)
+
+                with col_sp4:
+                    st.markdown('<div class="section-title">Customer Growth & Retention Trend</div>', unsafe_allow_html=True)
+                    _cgr = cdf.dropna(subset=["invoice_date"]).copy()
+                    _cgr["month_sort"] = _cgr["invoice_date"].dt.to_period("M").astype(str)
+                    _cgr["month"]      = _cgr["invoice_date"].dt.strftime("%b %Y")
+                    monthly_custs = _cgr.groupby(["month", "month_sort"])[cust_col].nunique().reset_index()
+                    monthly_custs.columns = ["month", "month_sort", "customers"]
+                    monthly_custs = monthly_custs.sort_values("month_sort")
+                    monthly_custs["growth"] = monthly_custs["customers"].pct_change() * 100
+                    if len(monthly_custs) >= 2:
+                        fig_growth = go.Figure()
+                        fig_growth.add_trace(go.Bar(
+                            x=monthly_custs["month"], y=monthly_custs["customers"],
+                            name="Active Customers", marker_color="#3B82F6",
+                        ))
+                        fig_growth.add_trace(go.Scatter(
+                            x=monthly_custs["month"], y=monthly_custs["growth"],
+                            name="MoM Growth %", mode="lines+markers", yaxis="y2",
+                            line=dict(color="#F59E0B", width=2),
+                        ))
+                        fig_growth.update_layout(
+                            xaxis=dict(type="category", title="", tickangle=-30),
+                            yaxis=dict(title="Customer Count"),
+                            yaxis2=dict(overlaying="y", side="right", showgrid=False, title="Growth %"),
+                            height=320, showlegend=True,
+                        )
+                        T(fig_growth); st.plotly_chart(fig_growth, use_container_width=True)
+
+            st.markdown("---")
+
+            # ════════════════════════════════════════════════
+            # SECTION E — CATEGORY PREFERENCE ANALYSIS
+            # ════════════════════════════════════════════════
+            st.markdown('<div class="section-title">\U0001f4cb Category Preference Analysis</div>', unsafe_allow_html=True)
+
+            # Favorite category per customer
+            cust_cat = cdf.groupby([cust_col, "_cust_label", "category_display"])["total_amount"].sum().reset_index()
+            fav_cat = (
+                cust_cat.sort_values("total_amount", ascending=False)
+                .drop_duplicates(cust_col)
+                .rename(columns={"category_display": "fav_category", "total_amount": "fav_spend"})
+            )
+
+            col_cat1, col_cat2 = st.columns(2)
+
+            with col_cat1:
+                st.markdown('<div class="section-title">Customer Favorite Category Distribution</div>', unsafe_allow_html=True)
+                fav_dist = fav_cat["fav_category"].value_counts().reset_index()
+                fav_dist.columns = ["Category", "Customers"]
+                fig_fav = px.bar(
+                    fav_dist, x="Category", y="Customers",
+                    color="Category", color_discrete_sequence=PALETTE,
+                    text="Customers",
+                )
+                fig_fav.update_traces(textposition="outside")
+                fig_fav.update_layout(height=340, showlegend=False, xaxis_tickangle=-30)
+                T(fig_fav); st.plotly_chart(fig_fav, use_container_width=True)
+
+            with col_cat2:
+                st.markdown('<div class="section-title">Category Preference Heatmap (Top 20 Customers)</div>', unsafe_allow_html=True)
+                top20_ids = grp_agg.sort_values("total_spend", ascending=False).head(20)[cust_col].tolist()
+                heat_data = cust_cat[cust_cat[cust_col].isin(top20_ids)].copy()
+                if not heat_data.empty:
+                    pivot_heat = heat_data.pivot_table(
+                        index="_cust_label", columns="category_display",
+                        values="total_amount", aggfunc="sum", fill_value=0
+                    )
+                    fig_cat_hm = go.Figure(go.Heatmap(
+                        z=pivot_heat.values,
+                        x=pivot_heat.columns.tolist(),
+                        y=pivot_heat.index.tolist(),
+                        colorscale=[[0, "#1a1a2e"], [0.5, "#6c5ce7"], [1, "#F59E0B"]],
+                        text=pivot_heat.values.round(0),
+                        texttemplate="%{text:,.0f}",
+                        textfont={"size": 8},
+                    ))
+                    fig_cat_hm.update_layout(
+                        height=max(340, len(pivot_heat) * 22),
+                        xaxis=dict(title="", tickangle=-30),
+                        yaxis=dict(title=""),
+                    )
+                    T(fig_cat_hm); st.plotly_chart(fig_cat_hm, use_container_width=True)
+
+            st.markdown("---")
+
+            # ════════════════════════════════════════════════
+            # SECTION F — REGION-WISE CUSTOMER ANALYTICS
+            # ════════════════════════════════════════════════
+            CURRENCY_COUNTRY_CUST = {
+                "IDR": "Southeast Asia", "USD": "North America", "INR": "South Asia",
+                "NGN": "West Africa",    "VND": "Southeast Asia","PHP": "Southeast Asia",
+                "DZD": "North Africa",   "PKR": "South Asia",    "TRY": "Middle East",
+                "UAH": "Eastern Europe", "IRR": "Middle East",   "BDT": "South Asia",
+                "GBP": "Western Europe", "MYR": "Southeast Asia","EUR": "Western Europe",
+                "HKD": "East Asia",      "MMK": "Southeast Asia","BRL": "South America",
+                "AED": "Middle East",    "CHF": "Western Europe","ETB": "East Africa",
+                "TWD": "East Asia",      "ZAR": "Southern Africa","EGP": "North Africa",
+                "KES": "East Africa",    "THB": "Southeast Asia","JPY": "East Asia",
+                "XOF": "West Africa",    "UZS": "Central Asia",  "MXN": "North America",
+                "NPR": "South Asia",     "CAD": "North America",  "SGD": "Southeast Asia",
+                "RUB": "Eastern Europe", "KHR": "Southeast Asia","PEN": "South America",
+                "MAD": "North Africa",   "NZD": "Oceania",        "BTC": "Global",
+                "AZN": "Central Asia",   "PLN": "Eastern Europe","LYD": "North Africa",
+                "ZMW": "Southern Africa","CRC": "Central America","LKR": "South Asia",
+                "AUD": "Oceania",
+            }
+
+            if "currency" in cdf.columns:
+                cdf["_region"] = cdf["currency"].map(
+                    lambda c: CURRENCY_COUNTRY_CUST.get(c, "Other"))
+                rdf_cust = cdf[cdf["_region"] != "Other"]
+
+                if not rdf_cust.empty:
+                    st.markdown('<div class="section-title">\U0001f310 Region-wise Customer Analytics</div>', unsafe_allow_html=True)
+
+                    reg_cust = rdf_cust.groupby("_region").agg(
+                        customers=(cust_col, "nunique"),
+                        total_spend=("total_amount", "sum"),
+                        invoices=("bill_id", "count"),
+                    ).reset_index().sort_values("total_spend", ascending=False)
+
+                    col_r1, col_r2 = st.columns(2)
+
+                    with col_r1:
+                        st.markdown('<div class="section-title">Customer Count by Region</div>', unsafe_allow_html=True)
+                        fig_rc = px.bar(
+                            reg_cust, x="_region", y="customers",
+                            color="_region", color_discrete_sequence=PALETTE,
+                            text="customers",
+                            labels={"_region": "Region", "customers": "Customers"},
+                        )
+                        fig_rc.update_traces(textposition="outside")
+                        fig_rc.update_layout(height=320, showlegend=False, xaxis_tickangle=-30)
+                        T(fig_rc); st.plotly_chart(fig_rc, use_container_width=True)
+
+                    with col_r2:
+                        st.markdown('<div class="section-title">Spend by Region</div>', unsafe_allow_html=True)
+                        fig_rs = px.pie(
+                            reg_cust, values="total_spend", names="_region",
+                            color_discrete_sequence=PALETTE, hole=0.55,
+                        )
+                        fig_rs.update_traces(textposition="outside", textinfo="label+percent",
+                                              textfont_size=10)
+                        fig_rs.update_layout(height=320, showlegend=False)
+                        T(fig_rs); st.plotly_chart(fig_rs, use_container_width=True)
+
+                    # Top customers per region
+                    st.markdown('<div class="section-title">Top Customers by Region</div>', unsafe_allow_html=True)
+                    top_cust_region = (
+                        rdf_cust.groupby(["_region", cust_col, "_cust_label"])["total_amount"]
+                        .sum().reset_index()
+                        .sort_values("total_amount", ascending=False)
+                        .groupby("_region").head(3)
+                        .sort_values("total_amount", ascending=False)
+                        .head(20)
+                    )
+                    top_cust_region["label"] = (top_cust_region["_region"] + " | "
+                                                 + top_cust_region["_cust_label"])
+                    fig_tcr = px.bar(
+                        top_cust_region, x="total_amount", y="label", orientation="h",
+                        color="_region", color_discrete_sequence=PALETTE,
+                        labels={"total_amount": "Total Spend", "label": "Region | Customer"},
+                    )
+                    fig_tcr.update_layout(height=max(320, len(top_cust_region) * 24),
+                                           yaxis=dict(title="", autorange="reversed"),
+                                           showlegend=False)
+                    T(fig_tcr); st.plotly_chart(fig_tcr, use_container_width=True)
+
+                    # Category preference by region
+                    st.markdown('<div class="section-title">Category Preference by Region</div>', unsafe_allow_html=True)
+                    reg_cat = rdf_cust.groupby(["_region", "category_display"])["total_amount"].sum().reset_index()
+                    reg_cat_pivot = reg_cat.pivot_table(
+                        index="_region", columns="category_display",
+                        values="total_amount", fill_value=0)
+                    fig_rcp = go.Figure(go.Heatmap(
+                        z=reg_cat_pivot.values,
+                        x=reg_cat_pivot.columns.tolist(),
+                        y=reg_cat_pivot.index.tolist(),
+                        colorscale=[[0, "#1a1a2e"], [0.5, "#6c5ce7"], [1, "#10B981"]],
+                        text=reg_cat_pivot.values.round(0),
+                        texttemplate="%{text:,.0f}",
+                        textfont={"size": 9},
+                    ))
+                    fig_rcp.update_layout(
+                        height=max(280, len(reg_cat_pivot) * 32),
+                        xaxis=dict(title="", tickangle=-30),
+                        yaxis=dict(title=""),
+                    )
+                    T(fig_rcp); st.plotly_chart(fig_rcp, use_container_width=True)
+
+                    st.markdown("---")
+
+            # ════════════════════════════════════════════════
+            # SECTION G — UPSELL OPPORTUNITIES
+            # ════════════════════════════════════════════════
+            st.markdown('<div class="section-title">\U0001f4a1 Upsell Opportunities</div>', unsafe_allow_html=True)
+
+            upsell_recs = []
+
+            # 1. High-CLV customers
+            high_clv = grp_agg.nlargest(10, "clv")
+            for _, row in high_clv.iterrows():
+                upsell_recs.append({
+                    "icon": "\U0001f31f",
+                    "color": "#F59E0B",
+                    "customer": row["cust_label"],
+                    "reason": f"High CLV customer ({fmt(row['clv'])}). "
+                               f"Offer premium tier or loyalty rewards.",
+                })
+
+            # 2. Customers with increasing spend (last 2 months MoM growth)
+            if "invoice_date" in cdf.columns:
+                _spend_trend = cdf.dropna(subset=["invoice_date"]).copy()
+                _spend_trend["month_sort"] = _spend_trend["invoice_date"].dt.to_period("M").astype(str)
+                _cust_monthly = (
+                    _spend_trend.groupby([cust_col, "_cust_label", "month_sort"])["total_amount"]
+                    .sum().unstack(fill_value=0)
+                )
+                if _cust_monthly.shape[1] >= 2:
+                    last_m  = _cust_monthly.iloc[:, -1]
+                    prev_m  = _cust_monthly.iloc[:, -2].replace(0, float("nan"))
+                    growth_ = ((last_m - prev_m) / prev_m * 100).dropna()
+                    top_growers = growth_[growth_ > 20].nlargest(5)
+                    for cid_, gpct_ in top_growers.items():
+                        # Retrieve label safely
+                        lbl_rows = grp_agg[grp_agg[cust_col] == cid_]["cust_label"]
+                        lbl_ = lbl_rows.values[0] if len(lbl_rows) > 0 else str(cid_)[:20]
+                        upsell_recs.append({
+                            "icon": "\U0001f4c8",
+                            "color": "#10B981",
+                            "customer": lbl_,
+                            "reason": f"Spend increased {gpct_:+.1f}% last month. "
+                                       f"Ideal candidate for premium product recommendations.",
+                        })
+
+            # 3. Multi-category buyers
+            custs_multi_cat = (
+                cdf.groupby([cust_col, "_cust_label"])["category_display"].nunique()
+                .reset_index()
+            )
+            custs_multi_cat.columns = [cust_col, "cust_label", "cat_count"]
+            multi_buyers = custs_multi_cat[custs_multi_cat["cat_count"] >= 3].head(5)
+            for _, row in multi_buyers.iterrows():
+                # Find their least-used category vs all categories
+                cust_cats = (
+                    cdf[cdf[cust_col] == row[cust_col]]
+                    .groupby("category_display")["total_amount"].sum()
+                    .sort_values()
+                )
+                all_cats  = set(cdf["category_display"].dropna().unique())
+                missing   = list(all_cats - set(cust_cats.index))
+                rec_cat   = missing[0] if missing else (cust_cats.index[0] if len(cust_cats) else "new categories")
+                upsell_recs.append({
+                    "icon": "\U0001f6d2",
+                    "color": "#8B5CF6",
+                    "customer": row["cust_label"],
+                    "reason": f"Buys {row['cat_count']} categories. "
+                               f"Recommend expanding into **{rec_cat}**.",
+                })
+
+            # Render upsell cards (max 15)
+            if upsell_recs:
+                for rec in upsell_recs[:15]:
+                    r_, g_, b_ = tuple(int(rec["color"].lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
+                    st.markdown(f"""
+                    <div style="background:rgba({r_},{g_},{b_},0.10);
+                                border-left:4px solid {rec['color']};border-radius:10px;
+                                padding:0.9rem 1.2rem;margin-bottom:0.6rem;
+                                display:flex;align-items:flex-start;gap:0.8rem;">
+                      <span style="font-size:1.3rem;">{rec['icon']}</span>
+                      <div>
+                        <div style="font-weight:700;color:#0F172A;font-size:0.9rem;">{rec['customer']}</div>
+                        <div style="color:#475569;font-size:0.85rem;margin-top:2px;">{rec['reason']}</div>
+                      </div>
+                    </div>""", unsafe_allow_html=True)
+            else:
+                st.info("Not enough data to generate upsell recommendations.")
+
+            st.markdown("---")
+
+            # ════════════════════════════════════════════════
+            # SECTION H — AI INSIGHTS
+            # ════════════════════════════════════════════════
+            st.markdown('<div class="section-title">\U0001f9e0 AI-Generated Customer Insights</div>', unsafe_allow_html=True)
+
+            ai_insights = []
+
+            # 1. Pareto — top 20% customers
+            if not grp_agg.empty:
+                n20 = max(1, int(len(grp_agg) * 0.20))
+                top20_spend_pct = (
+                    grp_agg.nlargest(n20, "total_spend")["total_spend"].sum()
+                    / grp_agg["total_spend"].sum() * 100
+                )
+                ai_insights.append({
+                    "icon": "\U0001f4ca",
+                    "color": "#6c5ce7",
+                    "text": f"Top **{n20}** customers ({20}% of base) contribute "
+                             f"**{top20_spend_pct:.1f}%** of total spend — classic Pareto pattern.",
+                })
+
+            # 2. Top category overall
+            if "category_display" in cdf.columns:
+                top_cat_overall = cdf.groupby("category_display")["total_amount"].sum().idxmax()
+                top_cat_pct = (
+                    cdf.groupby("category_display")["total_amount"].sum().max()
+                    / cdf["total_amount"].sum() * 100
+                )
+                ai_insights.append({
+                    "icon": "\U0001f3c6",
+                    "color": "#10B981",
+                    "text": f"**{top_cat_overall}** is the most preferred category, "
+                             f"accounting for **{top_cat_pct:.1f}%** of customer spend.",
+                })
+
+            # 3. Champions count
+            champions_count = int((rfm["RFM_Segment"] == "Champions").sum())
+            if champions_count > 0:
+                ai_insights.append({
+                    "icon": "\U0001f451",
+                    "color": "#F59E0B",
+                    "text": f"**{champions_count}** customers are classified as **Champions** "
+                             f"(high R + F + M scores) — your most valuable cohort.",
+                })
+
+            # 4. At-risk customers
+            at_risk_count = int((rfm["RFM_Segment"] == "At Risk").sum())
+            if at_risk_count > 0:
+                ai_insights.append({
+                    "icon": "\u26a0\ufe0f",
+                    "color": "#EF4444",
+                    "text": f"**{at_risk_count}** customers are classified as **At Risk** — "
+                             f"they used to buy frequently but haven't purchased recently. "
+                             f"Consider re-engagement campaigns.",
+                })
+
+            # 5. Top customer contribution
+            if not grp_agg.empty:
+                top1 = grp_agg.nlargest(1, "total_spend").iloc[0]
+                top1_pct = top1["total_spend"] / grp_agg["total_spend"].sum() * 100
+                ai_insights.append({
+                    "icon": "\U0001f31f",
+                    "color": "#3B82F6",
+                    "text": f"Top customer **{top1['cust_label']}** contributes "
+                             f"**{fmt(top1['total_spend'])}** ({top1_pct:.1f}% of total spend).",
+                })
+
+            # 6. Active vs inactive ratio
+            active_pct = active_custs / total_custs * 100 if total_custs else 0
+            ai_insights.append({
+                "icon": "\U0001f7e2",
+                "color": "#10B981",
+                "text": f"**{active_pct:.1f}%** of customers are active (purchased in the last "
+                         f"{ACTIVE_DAYS} days). **{100-active_pct:.1f}%** may need re-engagement.",
+            })
+
+            # 7. Avg CLV
+            ai_insights.append({
+                "icon": "\U0001f4b0",
+                "color": "#8B5CF6",
+                "text": f"Average Customer Lifetime Value is **{fmt(avg_clv)}**. "
+                         f"High-Value segment CLV is "
+                         f"**{fmt(seg_df[seg_df['segment']=='High Value Customers']['clv'].mean() if 'High Value Customers' in seg_df['segment'].values else 0)}**.",
+            })
+
+            # Render insight cards in 2-column grid
+            _n = len(ai_insights)
+            _half = (_n + 1) // 2
+            ai_col1, ai_col2 = st.columns(2)
+            for i, ins in enumerate(ai_insights):
+                r_, g_, b_ = tuple(int(ins["color"].lstrip("#")[i_:i_+2], 16) for i_ in (0, 2, 4))
+                card_html = f"""
+                <div style="background:rgba({r_},{g_},{b_},0.10);
+                            border-left:4px solid {ins['color']};border-radius:10px;
+                            padding:0.9rem 1.2rem;margin-bottom:0.7rem;">
+                  <span style="font-size:1.1rem;margin-right:8px;">{ins['icon']}</span>
+                  <span style="color:#334155;font-size:0.88rem;">{ins['text']}</span>
+                </div>"""
+                if i < _half:
+                    ai_col1.markdown(card_html, unsafe_allow_html=True)
+                else:
+                    ai_col2.markdown(card_html, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
