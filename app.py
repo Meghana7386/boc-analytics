@@ -325,10 +325,13 @@ def load_raw_data():
 # ════════════════════════════════════════════════════════════════
 # GLOBAL FILTER FUNCTION
 # ════════════════════════════════════════════════════════════════
-def apply_filters(df_full, date_range, sel_currency, sel_cats, sel_vendor, sel_user="All"):
+def apply_filters(df_full, date_range, sel_currency, sel_cats, sel_vendor,
+                  sel_user="All", sel_bill_cats=None, sel_merchant="All",
+                  sel_items=None):
     """
     Central filter function.
-    Returns filtered_df based on all sidebar selections incl. user.
+    Returns filtered_df based on all sidebar selections incl. user,
+    bill categories, merchants, and items.
     Stored in st.session_state['filtered_df'].
     """
     fdf = df_full.copy()
@@ -354,6 +357,32 @@ def apply_filters(df_full, date_range, sel_currency, sel_cats, sel_vendor, sel_u
     # 5. User
     if sel_user != "All" and "user_id" in fdf.columns:
         fdf = fdf[fdf["user_id"] == sel_user]
+
+    # 6. Bill Categories (multi)
+    if sel_bill_cats:
+        fdf = fdf[fdf["category_display"].isin(sel_bill_cats)]
+
+    # 7. Merchant (single)
+    if sel_merchant != "All":
+        fdf = fdf[fdf["merchant_name"] == sel_merchant]
+
+    # 8. Items (multi) — match against line_items descriptions
+    if sel_items and "line_items" in fdf.columns:
+        sel_items_lower = [it.lower() for it in sel_items]
+        def _has_item(line_items_list):
+            if not isinstance(line_items_list, list):
+                return False
+            for item in line_items_list:
+                desc = ""
+                if isinstance(item, dict):
+                    desc = str(item.get("description", item.get("name", ""))).lower()
+                elif isinstance(item, str):
+                    desc = item.lower()
+                for sel in sel_items_lower:
+                    if sel in desc:
+                        return True
+            return False
+        fdf = fdf[fdf["line_items"].apply(_has_item)]
 
     st.session_state["filtered_df"] = fdf
     return fdf
@@ -421,7 +450,8 @@ def alert_html(a):
       <div class="alert-text">{a['message']}</div>
     </div>"""
 
-def filter_banner(sel_currency, sel_cats, sel_vendor, date_range, n_records):
+def filter_banner(sel_currency, sel_cats, sel_vendor, date_range, n_records,
+                  sel_bill_cats=None, sel_merchant="All", sel_items=None):
     """Renders active filter summary bar at top of each tab."""
     tags = []
     if date_range and len(date_range) == 2:
@@ -432,8 +462,14 @@ def filter_banner(sel_currency, sel_cats, sel_vendor, date_range, n_records):
         tags.append("" + ", ".join(sel_cats))
     if sel_vendor != "All":
         tags.append(f"{sel_vendor}")
+    if sel_bill_cats:
+        tags.append("Bill: " + ", ".join(sel_bill_cats))
+    if sel_merchant != "All":
+        tags.append(f"Merchant: {sel_merchant}")
+    if sel_items:
+        tags.append("Items: " + ", ".join(sel_items))
     if not tags:
-        tags.append("🌐 All Data")
+        tags.append("All Data")
     tags_html = "".join(f'<span class="filter-tag">{t}</span>' for t in tags)
     st.markdown(
         f'<div class="filter-banner">'
@@ -531,11 +567,64 @@ def main():
         else:
             st.caption("User data not available in this dataset.")
 
+        # ── BILL CATEGORIES / MERCHANT / ITEMS FILTERS ─────────
+        st.markdown("---")
+        st.markdown("### Bill Categories")
+
+        # Dynamically populate bill categories from the current dataset
+        all_bill_cats = sorted(df_full["category_display"].dropna().unique().tolist())
+        sel_bill_cats = st.multiselect(
+            "Select Bill Categories",
+            all_bill_cats,
+            default=[],
+            placeholder="All bill categories",
+            key="filter_bill_cats",
+        )
+
+        st.markdown("### Merchants")
+
+        # Dynamically populate merchants from the current dataset
+        all_merchants = ["All"] + sorted(
+            df_full["merchant_name"].dropna().unique().tolist()
+        )
+        sel_merchant = st.selectbox(
+            "Search Merchant",
+            all_merchants,
+            index=0,
+            key="filter_merchant",
+        )
+
+        st.markdown("### Items")
+
+        # Extract unique item descriptions from line_items column
+        _item_names = set()
+        if "line_items" in df_full.columns:
+            for items_list in df_full["line_items"].dropna():
+                if isinstance(items_list, list):
+                    for item in items_list:
+                        if isinstance(item, dict):
+                            desc = item.get("description", item.get("name", ""))
+                            if desc and str(desc).strip():
+                                _item_names.add(str(desc).strip())
+                        elif isinstance(item, str) and item.strip():
+                            _item_names.add(item.strip())
+        all_item_names = sorted(_item_names) if _item_names else ["No items found"]
+
+        sel_items = st.multiselect(
+            "Search Items",
+            all_item_names if all_item_names != ["No items found"] else [],
+            default=[],
+            placeholder="All items",
+            key="filter_items",
+        )
+
         st.markdown("---")
 
-        # ── APPLY GLOBAL FILTERS (incl. user) ─────────────────
-        filtered_df = apply_filters(df_full, date_range, sel_currency, sel_cats,
-                                    sel_vendor, sel_user)
+        # ── APPLY GLOBAL FILTERS (incl. user + bill cats + merchant + items) ──
+        filtered_df = apply_filters(
+            df_full, date_range, sel_currency, sel_cats, sel_vendor,
+            sel_user, sel_bill_cats, sel_merchant, sel_items
+        )
 
         # Sidebar summary (reflects filtered data)
         st.markdown("### Filtered Summary")
@@ -580,7 +669,8 @@ def main():
     # ──────────────────────────────────────────────────────────
     with tabs[0]:
         st.markdown("## Executive Dashboard")
-        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
+        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df),
+                      sel_bill_cats, sel_merchant, sel_items)
 
         # ── KPIs directly from filtered_df ─────────────────
         fdf = filtered_df   # alias for brevity
@@ -748,7 +838,8 @@ def main():
     # ──────────────────────────────────────────────────────────
     with tabs[1]:
         st.markdown("## Spend Analytics")
-        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
+        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df),
+                      sel_bill_cats, sel_merchant, sel_items)
 
         fdf = filtered_df
         ts   = fdf["total_amount"].sum()
@@ -896,7 +987,8 @@ def main():
     # ──────────────────────────────────────────────────────────
     with tabs[2]:
         st.markdown("## Cost Optimization")
-        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
+        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df),
+                      sel_bill_cats, sel_merchant, sel_items)
 
         opt        = ana["opt_score"]
         savings_df = ana["savings"]
@@ -994,7 +1086,8 @@ def main():
     # ──────────────────────────────────────────────────────────
     with tabs[3]:
         st.markdown("## Vendor Analytics")
-        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
+        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df),
+                      sel_bill_cats, sel_merchant, sel_items)
 
         scorecard = ana["scorecard"]
         class_counts = scorecard["classification"].value_counts()
@@ -1070,7 +1163,8 @@ def main():
     # ──────────────────────────────────────────────────────────
     with tabs[4]:
         st.markdown("## Market Trend Analysis")
-        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
+        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df),
+                      sel_bill_cats, sel_merchant, sel_items)
 
         cat_inf = ana["cat_inflation"]
         vt      = ana["vendor_trend"]
@@ -1174,7 +1268,8 @@ def main():
     # ──────────────────────────────────────────────────────────
     with tabs[5]:
         st.markdown("## Spend Forecasting & Vendor Clustering")
-        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
+        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df),
+                      sel_bill_cats, sel_merchant, sel_items)
 
         forecast_df = ana["forecast"]
         clusters_df = ana["clusters"]
@@ -1263,7 +1358,8 @@ def main():
     # ──────────────────────────────────────────────────────────
     with tabs[6]:
         st.markdown("## Anomaly Detection")
-        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
+        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df),
+                      sel_bill_cats, sel_merchant, sel_items)
         st.markdown("*Using **Isolation Forest** on filtered data — anomalies are detected only within the selected scope.*")
 
         adf = ana["anomalies"]
@@ -1350,7 +1446,8 @@ def main():
     # ──────────────────────────────────────────────────────────
     with tabs[7]:
         st.markdown("## User Analytics")
-        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
+        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df),
+                      sel_bill_cats, sel_merchant, sel_items)
 
         if not has_users:
             st.warning("User data is not available in the current dataset.")
@@ -1851,7 +1948,8 @@ def main():
     # ──────────────────────────────────────────────────────────
     with tabs[8]:
         st.markdown("## Region Analytics")
-        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
+        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df),
+                      sel_bill_cats, sel_merchant, sel_items)
 
         # ──────────────────────────────────────────────────────────
         # DERIVE REGION + COUNTRY FROM CURRENCY
@@ -2309,7 +2407,8 @@ def main():
     # ──────────────────────────────────────────────────────────
     with tabs[9]:
         st.markdown("## Customer Usage Analytics")
-        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df))
+        filter_banner(sel_currency, sel_cats, sel_vendor, date_range, len(filtered_df),
+                      sel_bill_cats, sel_merchant, sel_items)
 
         # ── Detect customer identifier column ─────────────────
         cdf = filtered_df.copy()
