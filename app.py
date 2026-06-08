@@ -3207,3 +3207,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# v2.1 — Bill Categories, Merchants, Items sidebar filters
